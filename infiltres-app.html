@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Infiltrés - Maître du Jeu</title>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --noir:#0D0B12; --noir2:#15111F; --noir3:#1E1830;
+  --violet:#3B1060; --violet2:#6B3FA0; --violet3:#9B6FD0;
+  --or:#C8960C; --or2:#E8B820;
+  --creme:#F0EBE0; --creme2:#C8C0B0;
+  --rouge:#8B1A1A; --rouge2:#C43030;
+  --vert:#1A5C2A; --vert2:#2E8B45;
+  --gris:#3A3550; --gris2:#5A5570;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif; background:var(--noir); color:var(--creme); min-height:100vh; overflow-x:hidden; }
+
+/* ===== SETUP ===== */
+#screen-setup { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:40px 20px; background:radial-gradient(ellipse at 50% 30%,#2A1050 0%,var(--noir) 70%); }
+.logo-title { font-family:Georgia,'Times New Roman',serif; font-size:clamp(2.5rem,6vw,4.5rem); font-weight:700; letter-spacing:.15em; color:var(--creme); text-align:center; line-height:1; margin-bottom:8px; }
+.logo-sub { font-family:Georgia,'Times New Roman',serif; font-size:clamp(.8rem,2vw,1rem); letter-spacing:.4em; color:var(--or); text-align:center; text-transform:uppercase; margin-bottom:50px; }
+.setup-tabs { display:flex; gap:0; margin-bottom:0; width:100%; max-width:640px; }
+.setup-tab { flex:1; padding:12px; background:var(--noir3); border:1px solid var(--gris); color:var(--gris2); font-size:.8rem; letter-spacing:.1em; font-family:Georgia,'Times New Roman',serif; cursor:pointer; text-align:center; transition:all .15s; text-transform:uppercase; }
+.setup-tab:first-child { border-radius:8px 0 0 0; }
+.setup-tab:last-child { border-radius:0 8px 0 0; }
+.setup-tab.active { background:var(--noir2); border-bottom-color:var(--noir2); color:var(--or); }
+.setup-card { background:var(--noir2); border:1px solid var(--violet); border-radius:0 0 12px 12px; padding:32px 40px 40px; width:100%; max-width:640px; box-shadow:0 0 60px rgba(59,16,96,.4); }
+.setup-panel { display:none; } .setup-panel.active { display:block; }
+.field-label { font-size:.75rem; letter-spacing:.1em; color:var(--creme2); text-transform:uppercase; margin-bottom:8px; display:block; }
+.nb-input { width:100%; background:var(--noir3); border:1px solid var(--gris); border-radius:8px; color:var(--creme); font-family:Georgia,'Times New Roman',serif; font-size:2rem; text-align:center; padding:16px; margin-bottom:24px; outline:none; transition:border-color .2s; }
+.nb-input:focus { border-color:var(--violet2); }
+.role-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px; max-height:300px; overflow-y:auto; padding-right:4px; }
+.role-grid::-webkit-scrollbar { width:4px; } .role-grid::-webkit-scrollbar-thumb { background:var(--violet); border-radius:2px; }
+.role-toggle { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:6px; border:1px solid var(--gris); background:var(--noir3); cursor:pointer; transition:all .15s; user-select:none; }
+.role-toggle:hover { border-color:var(--violet2); }
+.role-toggle.active { border-color:var(--violet3); background:rgba(107,63,160,.2); }
+.role-toggle.active.infiltre { border-color:var(--rouge2); background:rgba(139,26,26,.2); }
+.role-toggle.active.neutre { border-color:var(--vert2); background:rgba(26,92,42,.2); }
+.role-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-chr{background:var(--violet3);} .dot-inf{background:var(--rouge2);} .dot-neu{background:var(--vert2);} .dot-bon{background:var(--or);}
+.role-toggle span { font-size:.8rem; color:var(--creme2); }
+.role-toggle.active span { color:var(--creme); }
+
+/* Attribution des rôles */
+.assign-grid { display:flex; flex-direction:column; gap:6px; max-height:360px; overflow-y:auto; margin-bottom:20px; padding-right:4px; }
+.assign-grid::-webkit-scrollbar { width:4px; } .assign-grid::-webkit-scrollbar-thumb { background:var(--violet); border-radius:2px; }
+.assign-row { display:grid; grid-template-columns:110px 1fr; gap:10px; align-items:center; }
+.assign-joueur { font-size:.85rem; color:var(--creme2); font-weight:500; }
+.assign-select { background:var(--noir3); border:1px solid var(--gris); border-radius:6px; color:var(--creme); font-size:.82rem; padding:7px 10px; outline:none; width:100%; transition:border-color .2s; }
+.assign-select:focus { border-color:var(--violet2); }
+.assign-select.inf { border-color:var(--rouge); color:var(--rouge2); }
+.assign-select.chr { border-color:var(--violet); }
+.assign-select.neu { border-color:var(--vert2); color:var(--vert2); }
+.assign-select.bon { border-color:var(--or); color:var(--or); }
+
+.btn-start { width:100%; padding:18px; background:linear-gradient(135deg,var(--violet) 0%,var(--violet2) 100%); border:none; border-radius:8px; color:var(--creme); font-family:Georgia,'Times New Roman',serif; font-size:1rem; letter-spacing:.15em; cursor:pointer; transition:all .2s; }
+.btn-start:hover { background:linear-gradient(135deg,var(--violet2) 0%,var(--violet3) 100%); transform:translateY(-1px); }
+.btn-secondary { width:100%; padding:14px; background:transparent; border:1px solid var(--violet); border-radius:8px; color:var(--violet3); font-family:Georgia,'Times New Roman',serif; font-size:.85rem; letter-spacing:.1em; cursor:pointer; transition:all .2s; margin-bottom:10px; }
+.btn-secondary:hover { background:rgba(107,63,160,.15); }
+
+/* ===== LAYOUT JEU ===== */
+#screen-game { display:none; height:100vh; overflow:hidden; }
+.game-layout { display:grid; grid-template-columns:260px 1fr; height:100vh; }
+
+/* Panneau joueurs */
+.panel-players { background:var(--noir2); border-right:1px solid var(--gris); display:flex; flex-direction:column; overflow:hidden; }
+.panel-header { padding:14px 16px; border-bottom:1px solid var(--gris); background:var(--noir3); }
+.panel-header h3 { font-family:Georgia,'Times New Roman',serif; font-size:.7rem; letter-spacing:.25em; color:var(--or); text-transform:uppercase; }
+.players-list { flex:1; overflow-y:auto; padding:8px; }
+.players-list::-webkit-scrollbar { width:4px; } .players-list::-webkit-scrollbar-thumb { background:var(--violet); border-radius:2px; }
+
+.player-card { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; border:1px solid transparent; margin-bottom:4px; transition:all .15s; }
+.player-card:hover:not(.eliminated) { border-color:var(--violet2); background:rgba(107,63,160,.08); }
+.player-card.eliminated { opacity:.35; }
+.player-card.selected-night { border-color:var(--or) !important; background:rgba(200,150,12,.12) !important; }
+
+.player-left { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+.player-name { font-size:.85rem; font-weight:500; color:var(--creme); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.player-card.eliminated .player-name { text-decoration:line-through; color:var(--gris2); }
+.player-role-badge { font-size:.65rem; color:var(--gris2); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.player-role-badge.inf { color:var(--rouge2); } .player-role-badge.chr { color:var(--violet3); } .player-role-badge.neu { color:var(--vert2); } .player-role-badge.bon { color:var(--or); }
+
+.player-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.vote-badge { background:var(--rouge); color:var(--creme); font-size:.7rem; font-weight:700; width:20px; height:20px; border-radius:50%; display:none; align-items:center; justify-content:center; }
+.vote-badge.visible { display:flex; }
+.elim-btn { width:20px; height:20px; border-radius:50%; border:1px solid var(--gris2); background:transparent; color:var(--gris2); font-size:.65rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
+.elim-btn:hover { border-color:var(--rouge2); color:var(--rouge2); }
+.player-card.eliminated .elim-btn { display:none; }
+.revive-btn { width:20px; height:20px; border-radius:50%; border:1px solid var(--gris); background:transparent; color:var(--gris2); font-size:.65rem; cursor:pointer; display:none; align-items:center; justify-content:center; transition:all .15s; }
+.player-card.eliminated .revive-btn { display:flex; }
+.revive-btn:hover { border-color:var(--vert2); color:var(--vert2); }
+
+.score-bar { padding:10px 14px; border-top:1px solid var(--gris); display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.score-item { text-align:center; padding:7px; border-radius:6px; }
+.score-item.chr { background:rgba(59,16,96,.3); border:1px solid var(--violet); }
+.score-item.inf { background:rgba(139,26,26,.3); border:1px solid var(--rouge); }
+.score-num { font-family:Georgia,'Times New Roman',serif; font-size:1.3rem; font-weight:700; }
+.score-item.chr .score-num { color:var(--violet3); } .score-item.inf .score-num { color:var(--rouge2); }
+.score-label { font-size:.6rem; letter-spacing:.1em; color:var(--creme2); text-transform:uppercase; }
+
+/* Zone principale */
+.main-area { display:flex; flex-direction:column; overflow:hidden; }
+.phase-nav { display:flex; align-items:center; justify-content:space-between; padding:10px 24px; background:var(--noir3); border-bottom:1px solid var(--gris); flex-shrink:0; }
+.phase-indicator { display:flex; align-items:center; gap:10px; }
+.phase-dot { width:10px; height:10px; border-radius:50%; }
+.phase-dot.nuit { background:var(--violet3); box-shadow:0 0 8px var(--violet3); }
+.phase-dot.jour { background:var(--or); box-shadow:0 0 8px var(--or); }
+.phase-dot.fin { background:var(--rouge2); box-shadow:0 0 8px var(--rouge2); }
+.phase-label { font-family:Georgia,'Times New Roman',serif; font-size:.75rem; letter-spacing:.2em; color:var(--creme2); text-transform:uppercase; }
+.turn-counter { font-family:Georgia,'Times New Roman',serif; font-size:.75rem; color:var(--gris2); letter-spacing:.1em; }
+.nav-btns { display:flex; gap:8px; }
+.btn-nav { padding:8px 18px; border-radius:6px; border:1px solid var(--gris); background:transparent; color:var(--creme2); font-size:.8rem; cursor:pointer; transition:all .15s; font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif; }
+.btn-nav:hover { border-color:var(--violet2); color:var(--creme); }
+.btn-nav.primary { background:var(--violet); border-color:var(--violet2); color:var(--creme); }
+.btn-nav.primary:hover { background:var(--violet2); }
+
+.content-area { flex:1; overflow-y:auto; padding:28px 36px; }
+.content-area::-webkit-scrollbar { width:6px; } .content-area::-webkit-scrollbar-thumb { background:var(--violet); border-radius:3px; }
+
+/* Phase card */
+.phase-card { animation:fadeReveal .5s ease-out; }
+@keyframes fadeReveal { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.phase-eyebrow { font-family:Georgia,'Times New Roman',serif; font-size:.65rem; letter-spacing:.35em; color:var(--or); text-transform:uppercase; margin-bottom:10px; }
+.phase-title { font-family:Georgia,'Times New Roman',serif; font-size:clamp(1.5rem,3vw,2.2rem); font-weight:700; color:var(--creme); margin-bottom:6px; line-height:1.2; }
+.phase-title.rouge { color:var(--rouge2); } .phase-title.or { color:var(--or2); } .phase-title.vert { color:var(--vert2); }
+.phase-desc { font-size:.9rem; color:var(--creme2); line-height:1.7; margin-bottom:24px; max-width:600px; }
+
+/* Barre progression nuit */
+.night-progress { display:flex; gap:5px; margin-bottom:24px; flex-wrap:wrap; }
+.np-step { height:4px; border-radius:2px; background:var(--gris); flex:1; min-width:18px; transition:background .3s; }
+.np-step.done { background:var(--violet2); } .np-step.current { background:var(--or); }
+
+/* Spotlight rôle */
+.role-spotlight { background:var(--noir2); border:1px solid var(--violet); border-radius:12px; padding:24px 28px; margin-bottom:20px; position:relative; overflow:hidden; }
+.role-spotlight::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--violet3),transparent); }
+.role-spotlight.infiltre { border-color:var(--rouge); }
+.role-spotlight.infiltre::before { background:linear-gradient(90deg,transparent,var(--rouge2),transparent); }
+.role-spotlight.neutre { border-color:var(--vert); }
+.role-spotlight.neutre::before { background:linear-gradient(90deg,transparent,var(--vert2),transparent); }
+.role-spotlight.or-col { border-color:var(--or); }
+.role-spotlight.or-col::before { background:linear-gradient(90deg,transparent,var(--or),transparent); }
+.role-step { font-size:.65rem; letter-spacing:.3em; color:var(--gris2); text-transform:uppercase; margin-bottom:6px; }
+.role-name { font-family:Georgia,'Times New Roman',serif; font-size:1.5rem; font-weight:700; color:var(--creme); margin-bottom:14px; }
+.role-spotlight.infiltre .role-name { color:var(--rouge2); }
+.role-spotlight.neutre .role-name { color:var(--vert2); }
+.role-spotlight.or-col .role-name { color:var(--or); }
+.role-instruction { font-size:.88rem; color:var(--creme2); line-height:1.7; border-left:2px solid var(--violet2); padding-left:14px; margin-bottom:14px; }
+.role-spotlight.infiltre .role-instruction { border-left-color:var(--rouge2); }
+.role-spotlight.neutre .role-instruction { border-left-color:var(--vert2); }
+.role-spotlight.or-col .role-instruction { border-left-color:var(--or); }
+.role-note { font-size:.76rem; color:var(--gris2); font-style:italic; line-height:1.5; margin-bottom:16px; }
+
+/* Sélecteur joueurs nocturne */
+.night-selector { margin-top:14px; }
+.night-selector-label { font-size:.7rem; letter-spacing:.15em; color:var(--or); text-transform:uppercase; margin-bottom:10px; }
+.night-players-grid { display:flex; flex-wrap:wrap; gap:7px; }
+.night-player-btn { padding:7px 14px; border-radius:20px; border:1px solid var(--gris); background:var(--noir3); color:var(--creme2); font-size:.8rem; cursor:pointer; transition:all .15s; user-select:none; }
+.night-player-btn:hover { border-color:var(--violet2); color:var(--creme); }
+.night-player-btn.selected { border-color:var(--or); background:rgba(200,150,12,.15); color:var(--or2); font-weight:600; }
+.night-player-btn.selected.inf { border-color:var(--rouge2); background:rgba(196,48,48,.15); color:var(--rouge2); }
+.night-player-btn.eliminated-opt { opacity:.3; cursor:not-allowed; }
+.selection-summary { margin-top:10px; font-size:.78rem; color:var(--creme2); min-height:1.2em; }
+.selection-summary strong { color:var(--or); }
+.selection-summary.inf strong { color:var(--rouge2); }
+
+/* Résumé fin de nuit */
+.end-night-box { background:var(--noir2); border:1px solid var(--rouge); border-radius:12px; padding:24px 28px; margin-bottom:20px; position:relative; overflow:hidden; }
+.end-night-box::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--rouge2),transparent); }
+.end-night-title { font-family:Georgia,'Times New Roman',serif; font-size:1rem; color:var(--rouge2); margin-bottom:6px; letter-spacing:.08em; }
+.end-night-desc { font-size:.82rem; color:var(--gris2); margin-bottom:18px; line-height:1.5; }
+.end-night-players { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+.end-night-player { padding:8px 16px; border-radius:20px; border:1px solid var(--gris); background:var(--noir3); color:var(--creme2); font-size:.82rem; cursor:pointer; transition:all .15s; }
+.end-night-player:hover { border-color:var(--rouge2); }
+.end-night-player.selected { border-color:var(--rouge2); background:rgba(139,26,26,.25); color:var(--rouge2); font-weight:600; }
+.end-night-player.eliminated-opt { opacity:.3; cursor:not-allowed; }
+.btn-confirm-elim { padding:10px 22px; border-radius:6px; border:1px solid var(--rouge); background:transparent; color:var(--rouge2); font-size:.82rem; cursor:pointer; transition:all .15s; margin-right:8px; }
+.btn-confirm-elim:hover { background:var(--rouge); color:var(--creme); }
+.btn-skip-elim { padding:10px 22px; border-radius:6px; border:1px solid var(--gris); background:transparent; color:var(--gris2); font-size:.82rem; cursor:pointer; transition:all .15s; }
+.btn-skip-elim:hover { border-color:var(--creme2); color:var(--creme2); }
+
+/* Résumé des désignations nocturnes */
+.night-log { background:rgba(59,16,96,.15); border:1px solid rgba(107,63,160,.3); border-radius:8px; padding:14px 18px; margin-top:14px; }
+.night-log-title { font-size:.65rem; letter-spacing:.2em; color:var(--violet3); text-transform:uppercase; margin-bottom:8px; }
+.night-log-item { font-size:.78rem; color:var(--creme2); padding:3px 0; display:flex; gap:8px; }
+.night-log-item span:first-child { color:var(--violet3); font-weight:600; min-width:140px; }
+.night-log-item.inf span:first-child { color:var(--rouge2); }
+
+/* Phase jour */
+.jour-info { background:rgba(200,150,12,.08); border:1px solid rgba(200,150,12,.3); border-radius:10px; padding:18px 22px; margin-bottom:20px; }
+.jour-info-title { font-family:Georgia,'Times New Roman',serif; font-size:.75rem; letter-spacing:.2em; color:var(--or); text-transform:uppercase; margin-bottom:8px; }
+.jour-info ul { list-style:none; display:flex; flex-direction:column; gap:5px; }
+.jour-info li { font-size:.82rem; color:var(--creme2); padding-left:14px; position:relative; line-height:1.5; }
+.jour-info li::before { content:'—'; position:absolute; left:0; color:var(--or); }
+
+/* Vote */
+.vote-section { background:var(--noir2); border:1px solid var(--rouge); border-radius:12px; padding:24px 28px; margin-bottom:20px; position:relative; overflow:hidden; }
+.vote-section::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--rouge2),transparent); }
+.vote-title { font-family:Georgia,'Times New Roman',serif; font-size:1rem; letter-spacing:.08em; color:var(--rouge2); margin-bottom:6px; }
+.vote-desc { font-size:.8rem; color:var(--gris2); margin-bottom:16px; line-height:1.5; }
+.vote-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:7px; margin-bottom:16px; }
+.vote-player { display:flex; align-items:center; justify-content:space-between; padding:9px 13px; border-radius:8px; border:1px solid var(--gris); background:var(--noir3); cursor:pointer; transition:all .15s; user-select:none; }
+.vote-player:hover { border-color:var(--rouge2); background:rgba(139,26,26,.1); }
+.vote-player.has-votes { border-color:var(--rouge); background:rgba(139,26,26,.15); }
+.vote-pname { font-size:.82rem; color:var(--creme); }
+.vote-count { font-family:Georgia,'Times New Roman',serif; font-size:1.1rem; font-weight:700; color:var(--rouge2); min-width:18px; text-align:center; }
+.vote-leader { font-size:.8rem; color:var(--creme2); margin-bottom:12px; min-height:1.2em; }
+.vote-leader strong { color:var(--rouge2); }
+.vote-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.btn-vote-action { padding:8px 16px; border-radius:6px; border:1px solid; background:transparent; font-size:.8rem; cursor:pointer; transition:all .15s; font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif; }
+.btn-vote-reset { border-color:var(--gris); color:var(--gris2); }
+.btn-vote-reset:hover { border-color:var(--creme2); color:var(--creme2); }
+.btn-vote-elim { border-color:var(--rouge); color:var(--rouge2); }
+.btn-vote-elim:hover { background:var(--rouge); color:var(--creme); }
+
+/* Victoire */
+.victory-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; height:100%; padding:40px; }
+.victory-emoji { font-size:3.5rem; margin-bottom:20px; }
+.victory-title { font-family:Georgia,'Times New Roman',serif; font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; margin-bottom:14px; }
+.victory-desc { font-size:.95rem; color:var(--creme2); max-width:440px; line-height:1.7; margin-bottom:28px; }
+.btn-restart { padding:14px 32px; border-radius:8px; background:var(--violet); border:1px solid var(--violet2); color:var(--creme); font-family:Georgia,'Times New Roman',serif; font-size:.9rem; letter-spacing:.1em; cursor:pointer; transition:all .2s; }
+.btn-restart:hover { background:var(--violet2); }
+
+/* Overlay nuit */
+.night-overlay { position:fixed; inset:0; background:#000; z-index:100; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .4s; }
+.night-overlay.active { opacity:1; }
+.night-text { font-family:Georgia,'Times New Roman',serif; font-size:1.4rem; letter-spacing:.4em; color:var(--violet3); text-transform:uppercase; }
+
+@media(max-width:700px){ .game-layout{grid-template-columns:1fr} .panel-players{display:none} }
+</style>
+</head>
+<body>
+
+<div class="night-overlay" id="nightOverlay"><div class="night-text" id="nightOverlayText">La nuit tombe…</div></div>
+
+<!-- ===== SETUP ===== -->
+<div id="screen-setup">
+  <div class="logo-title">LES INFILTRÉS</div>
+  <div class="logo-sub">Outil du Maître du Jeu</div>
+
+  <div class="setup-tabs">
+    <div class="setup-tab active" id="tab1" onclick="switchTab(1)">① Joueurs & Rôles</div>
+    <div class="setup-tab" id="tab2" onclick="switchTab(2)">② Attribution</div>
+  </div>
+  <div class="setup-card">
+
+    <!-- Panneau 1 -->
+    <div class="setup-panel active" id="panel1">
+      <label class="field-label">Nombre de joueurs</label>
+      <input type="number" class="nb-input" id="nbJoueurs" min="7" max="20" value="10" oninput="updateNbJoueurs()">
+      <label class="field-label">Rôles présents dans cette partie</label>
+      <div class="role-grid" id="roleGrid"></div>
+      <button class="btn-secondary" onclick="switchTab(2)">Suivant : attribuer les rôles →</button>
+      <button class="btn-start" onclick="startGame()">Commencer sans attribution</button>
+    </div>
+
+    <!-- Panneau 2 -->
+    <div class="setup-panel" id="panel2">
+      <label class="field-label">Qui joue quoi ? (visible seulement par vous)</label>
+      <div class="assign-grid" id="assignGrid"></div>
+      <button class="btn-start" onclick="startGame()">Commencer la partie →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== JEU ===== -->
+<div id="screen-game">
+  <div class="game-layout">
+    <div class="panel-players">
+      <div class="panel-header"><h3>Joueurs</h3></div>
+      <div class="players-list" id="playersList"></div>
+      <div class="score-bar">
+        <div class="score-item chr"><div class="score-num" id="scoreAlive">—</div><div class="score-label">En jeu</div></div>
+        <div class="score-item inf"><div class="score-num" id="scoreElim">0</div><div class="score-label">Éliminés</div></div>
+      </div>
+    </div>
+    <div class="main-area">
+      <div class="phase-nav">
+        <div class="phase-indicator">
+          <div class="phase-dot" id="phaseDot"></div>
+          <div class="phase-label" id="phaseLabel">—</div>
+        </div>
+        <div class="turn-counter" id="turnCounter"></div>
+        <div class="nav-btns">
+          <button class="btn-nav" onclick="prevStep()">← Précédent</button>
+          <button class="btn-nav primary" onclick="nextStep()">Suivant →</button>
+        </div>
+      </div>
+      <div class="content-area" id="contentArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== DONNÉES RÔLES =====================
+const ROLES_DEF = [
+  { id:'pasteur',   nom:'Pasteur',            camp:'chr', ordre:1,  nuit1:true,  recurrent:false, maxSelect:0,
+    instruction:'Demandez au Pasteur de se réveiller et de mémoriser votre visage. Il doit être désigné <strong>deux fois</strong> lors de deux nuits différentes pour être emprisonné.',
+    note:'Referme les yeux discrètement. Ne révèle rien aux autres.' },
+  { id:'agentd',    nom:'Agent Double',       camp:'bon', ordre:2,  nuit1:true,  recurrent:false, maxSelect:0,
+    instruction:'Montrez à l\'Agent Double deux cartes non distribuées de votre choix. Il choisit silencieusement l\'une d\'elles : c\'est son nouveau rôle jusqu\'à la fin.',
+    note:'Notez le rôle choisi. Nécessite 2 cartes supplémentaires au deck.' },
+  { id:'entrem',    nom:'Entremetteuse',      camp:'chr', ordre:3,  nuit1:true,  recurrent:false, maxSelect:2,
+    instruction:'L\'Entremetteuse désigne deux joueurs qui formeront un couple pour toute la partie. Si l\'un meurt, l\'autre meurt aussi.',
+    note:'Si les deux sont de camps opposés, conditions de victoire croisées.' },
+  { id:'prophete',  nom:'Prophète',           camp:'chr', ordre:4,  nuit1:false, recurrent:true,  maxSelect:0,
+    instruction:'Si l\'un des deux voisins directs du Prophète est un Infiltré, faites-lui un signe discret. Il sait qu\'il y a un Infiltré parmi ses voisins, mais ignore lequel.',
+    note:'Signe très discret — personne d\'autre ne doit voir.' },
+  { id:'hackeuse',  nom:'Hackeuse',           camp:'chr', ordre:5,  nuit1:false, recurrent:true,  maxSelect:1,
+    instruction:'La Hackeuse désigne un joueur dont elle veut connaître l\'identité. Montrez-lui sa carte discrètement.',
+    note:'Soulevez toujours plusieurs cartes pour brouiller les pistes.' },
+  { id:'avocate',   nom:'Avocate',            camp:'chr', ordre:6,  nuit1:false, recurrent:true,  maxSelect:1,
+    instruction:'L\'Avocate désigne une personne à protéger cette nuit. Ce joueur ne peut pas être emprisonné même si les Infiltrés le choisissent. Elle ne peut pas se protéger deux nuits de suite.',
+    note:'Notez qui elle protège ce tour-ci.' },
+  { id:'interc',    nom:'Intercesseur',       camp:'chr', ordre:7,  nuit1:false, recurrent:true,  maxSelect:1, altNuit:true,
+    instruction:'L\'Intercesseur désigne un joueur "en prière". Ce joueur ne pourra pas voter lors de la Phase de Jour suivante (peut débattre). Annoncez son nom demain matin.',
+    note:'Agit une nuit sur deux. Annoncez le joueur en prière en début de Phase de Jour.' },
+  { id:'lanceuse',  nom:'Lanceuse d\'Alerte', camp:'chr', ordre:8,  nuit1:false, recurrent:true,  maxSelect:1,
+    instruction:'La Lanceuse d\'Alerte désigne un joueur qui ne pourra pas voter lors de la Phase de Jour suivante (peut débattre). Annoncez-le publiquement demain matin.',
+    note:'Différence avec l\'Intercesseur : elle agit chaque nuit.' },
+  { id:'infiltres', nom:'Infiltrés',          camp:'inf', ordre:9,  nuit1:false, recurrent:true,  maxSelect:1,
+    instruction:'Les Infiltrés se réveillent, se reconnaissent, et désignent silencieusement leur cible de la nuit. Mémorisez-la.',
+    note:'Vérifiez ensuite si l\'Avocate ou le Ministre protège la cible avant de valider.' },
+  { id:'propag',    nom:'Propagandiste',      camp:'inf', ordre:10, nuit1:false, recurrent:false, maxSelect:4,
+    instruction:'Le Propagandiste désigne 4 joueurs parmi les restants. Demain, seuls ces 4 joueurs participeront au vote — et sont donc les seuls à risquer l\'élimination.',
+    note:'Pouvoir unique. Il peut se désigner lui-même. Notez les 4 joueurs.' },
+  { id:'ministre',  nom:'Ministre',           camp:'chr', ordre:11, nuit1:false, recurrent:true,  maxSelect:0,
+    instruction:'Montrez silencieusement au Ministre la cible des Infiltrés. Il peut : (1) protéger cette personne [1x], ou (2) emprisonner un suspect [1x]. Dialogue mimé pour les options.',
+    note:'Deux pouvoirs à usage unique chacun, indépendants l\'un de l\'autre.' },
+  { id:'leader',    nom:'Leader Louange',     camp:'chr', ordre:12, nuit1:false, recurrent:false, maxSelect:0,
+    instruction:'Le Leader Louange peut chanter un cantique, ce qui réveille immédiatement tout le monde et passe directement à la Phase de Jour — sans résultat nocturne.',
+    note:'Pouvoir unique. S\'il choisit de chanter, personne n\'est emprisonné cette nuit.' },
+  { id:'guetteuse', nom:'Guetteuse',          camp:'chr', ordre:13, nuit1:false, recurrent:true,  maxSelect:0,
+    instruction:'La Guetteuse peut entrouvrir les yeux pour espionner les Infiltrés. Si un Infiltré la repère, il peut la désigner immédiatement pour l\'éliminer.',
+    note:'Elle n\'a pas le droit d\'ouvrir grand les yeux.' },
+];
+const ROLES_DIURNES = [
+  { id:'sage',        nom:'Sage',        camp:'bon' },
+  { id:'journaliste', nom:'Journaliste', camp:'neu' },
+  { id:'martyr',      nom:'Martyr',      camp:'neu' },
+];
+const ALL_ROLES = [...ROLES_DEF, ...ROLES_DIURNES];
+
+function getRoleDef(id){ return ALL_ROLES.find(r=>r.id===id)||null; }
+function getRoleCampClass(camp){ return camp==='inf'?'inf':camp==='neu'?'neu':camp==='bon'?'bon':'chr'; }
+
+// ===================== ÉTAT =====================
+let state = {
+  nbJoueurs:10, rolesActifs:new Set(['infiltres','hackeuse','avocate','ministre','pasteur']),
+  joueurs:[], assignments:{}, // id joueur -> role id
+  tour:1, phase:'nuit', stepNuit:0,
+  nightSelections:{}, // stepIndex -> [joueurIds]
+  nightElimId:null,   // joueur éliminé cette nuit (sélection fin de nuit)
+  intercAlt:false, propagUsed:false, leaderUsed:false, martyrFirst:false,
+};
+
+// ===================== SETUP UI =====================
+function switchTab(n){
+  document.getElementById('tab1').classList.toggle('active', n===1);
+  document.getElementById('tab2').classList.toggle('active', n===2);
+  document.getElementById('panel1').classList.toggle('active', n===1);
+  document.getElementById('panel2').classList.toggle('active', n===2);
+  if(n===2) buildAssignGrid();
+}
+
+function buildRoleGrid(){
+  const grid = document.getElementById('roleGrid');
+  grid.innerHTML = '';
+  ROLES_DEF.forEach(r=>{
+    const div = document.createElement('div');
+    const campCls = r.camp==='inf'?'infiltre':r.camp==='bon'?'':'';
+    div.className = 'role-toggle'+(state.rolesActifs.has(r.id)?' active '+campCls:'');
+    div.dataset.id = r.id;
+    const dotCls = r.camp==='chr'?'dot-chr':r.camp==='inf'?'dot-inf':r.camp==='bon'?'dot-bon':'dot-neu';
+    div.innerHTML = `<div class="role-dot ${dotCls}"></div><span>${r.nom}</span>`;
+    div.addEventListener('click',()=>{
+      if(state.rolesActifs.has(r.id)){state.rolesActifs.delete(r.id);div.className='role-toggle';}
+      else{state.rolesActifs.add(r.id);div.className='role-toggle active '+campCls;}
+    });
+    grid.appendChild(div);
+  });
+  ROLES_DIURNES.forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'role-toggle'+(state.rolesActifs.has(r.id)?' active neutre':'');
+    const dotCls = r.camp==='neu'?'dot-neu':'dot-bon';
+    div.innerHTML = `<div class="role-dot ${dotCls}"></div><span>${r.nom} <em style="font-size:.7em;color:var(--gris2)">(sans réveil)</em></span>`;
+    div.addEventListener('click',()=>{
+      if(state.rolesActifs.has(r.id)){state.rolesActifs.delete(r.id);div.className='role-toggle';}
+      else{state.rolesActifs.add(r.id);div.className='role-toggle active neutre';}
+    });
+    grid.appendChild(div);
+  });
+}
+
+function updateNbJoueurs(){
+  state.nbJoueurs = parseInt(document.getElementById('nbJoueurs').value)||10;
+}
+
+function buildAssignGrid(){
+  state.nbJoueurs = parseInt(document.getElementById('nbJoueurs').value)||10;
+  const grid = document.getElementById('assignGrid');
+  grid.innerHTML='';
+  const opts = ['(non attribué)',...ROLES_DEF.filter(r=>state.rolesActifs.has(r.id)).map(r=>r.nom),
+    ...ROLES_DIURNES.filter(r=>state.rolesActifs.has(r.id)).map(r=>r.nom)];
+  for(let i=0;i<state.nbJoueurs;i++){
+    const row = document.createElement('div');
+    row.className='assign-row';
+    const lbl = document.createElement('div');
+    lbl.className='assign-joueur';
+    lbl.textContent=`Joueur ${i+1}`;
+    const sel = document.createElement('select');
+    sel.className='assign-select';
+    sel.dataset.joueur=i;
+    opts.forEach(o=>{
+      const opt=document.createElement('option');
+      opt.value=o; opt.textContent=o; sel.appendChild(opt);
+    });
+    // Restaurer sélection existante
+    const existingRole = state.assignments[i];
+    if(existingRole){ const rd=getRoleDef(existingRole); if(rd) sel.value=rd.nom; }
+    sel.addEventListener('change',()=>{
+      const roleName=sel.value;
+      if(roleName==='(non attribué)'){ delete state.assignments[i]; sel.className='assign-select'; return; }
+      const rd=ALL_ROLES.find(r=>r.nom===roleName);
+      if(rd){ state.assignments[i]=rd.id; sel.className='assign-select '+getRoleCampClass(rd.camp); }
+    });
+    row.appendChild(lbl); row.appendChild(sel); grid.appendChild(row);
+  }
+}
+
+buildRoleGrid();
+
+// ===================== START =====================
+function startGame(){
+  state.nbJoueurs = parseInt(document.getElementById('nbJoueurs').value)||10;
+  state.joueurs = Array.from({length:state.nbJoueurs},(_,i)=>({id:i,nom:`Joueur ${i+1}`,votes:0,elimine:false}));
+  state.tour=1; state.phase='nuit'; state.stepNuit=0;
+  state.nightSelections={}; state.nightElimId=null;
+  state.intercAlt=false; state.propagUsed=false; state.leaderUsed=false; state.martyrFirst=false;
+  document.getElementById('screen-setup').style.display='none';
+  document.getElementById('screen-game').style.display='block';
+  renderPlayers(); renderContent();
+}
+
+// ===================== JOUEURS =====================
+function renderPlayers(){
+  const list=document.getElementById('playersList');
+  list.innerHTML='';
+  const alive=state.joueurs.filter(j=>!j.elimine).length;
+  document.getElementById('scoreAlive').textContent=alive;
+  document.getElementById('scoreElim').textContent=state.joueurs.filter(j=>j.elimine).length;
+  state.joueurs.forEach(j=>{
+    const div=document.createElement('div');
+    div.className='player-card'+(j.elimine?' eliminated':'');
+    div.dataset.id=j.id;
+    const left=document.createElement('div'); left.className='player-left';
+    const name=document.createElement('div'); name.className='player-name'; name.textContent=j.nom;
+    left.appendChild(name);
+    // Badge rôle
+    const rid=state.assignments[j.id];
+    if(rid){ const rd=getRoleDef(rid); if(rd){ const badge=document.createElement('div'); badge.className='player-role-badge '+getRoleCampClass(rd.camp); badge.textContent=rd.nom; left.appendChild(badge); } }
+    const right=document.createElement('div'); right.className='player-right';
+    const vb=document.createElement('div'); vb.className='vote-badge'+(j.votes>0?' visible':''); vb.textContent=j.votes;
+    if(!j.elimine){
+      const eb=document.createElement('button'); eb.className='elim-btn'; eb.title='Éliminer'; eb.innerHTML='✕';
+      eb.addEventListener('click',e=>{e.stopPropagation();eliminerJoueur(j.id);});
+      right.appendChild(vb); right.appendChild(eb);
+    } else {
+      const rb=document.createElement('button'); rb.className='revive-btn'; rb.title='Réintégrer'; rb.innerHTML='↩';
+      rb.addEventListener('click',e=>{e.stopPropagation();reviveJoueur(j.id);});
+      right.appendChild(rb);
+    }
+    div.appendChild(left); div.appendChild(right); list.appendChild(div);
+  });
+}
+
+function eliminerJoueur(id){ state.joueurs[id].elimine=true; state.joueurs[id].votes=0; renderPlayers(); checkVictory(); }
+function reviveJoueur(id){ state.joueurs[id].elimine=false; renderPlayers(); }
+
+// ===================== SÉQUENCE NUIT =====================
+function getNightSequence(){
+  const seq=[];
+  const isFirst=state.tour===1;
+  ROLES_DEF.forEach(r=>{
+    if(!state.rolesActifs.has(r.id)) return;
+    if(r.nuit1&&!isFirst) return;
+    if(!r.nuit1&&!r.recurrent&&!isFirst) {
+      // usage unique non-1re-nuit : vérifie si déjà utilisé
+      if(r.id==='propag'&&state.propagUsed) return;
+      if(r.id==='leader'&&state.leaderUsed) return;
+    }
+    if(r.id==='propag'&&state.propagUsed) return;
+    if(r.id==='leader'&&state.leaderUsed) return;
+    if(r.id==='interc'&&state.intercAlt) return;
+    seq.push(r);
+  });
+  seq.sort((a,b)=>a.ordre-b.ordre);
+  return seq;
+}
+
+// ===================== RENDER =====================
+function renderContent(){
+  const area=document.getElementById('contentArea');
+  const dot=document.getElementById('phaseDot');
+  const lbl=document.getElementById('phaseLabel');
+  const ctr=document.getElementById('turnCounter');
+
+  if(state.phase==='nuit'){
+    dot.className='phase-dot nuit'; lbl.textContent='Phase de Nuit'; ctr.textContent=`Tour ${state.tour}`;
+    const seq=getNightSequence();
+
+    // Étape spéciale : résumé fin de nuit
+    if(state.stepNuit===seq.length){
+      renderEndNight(area, seq); return;
+    }
+
+    const role=seq[state.stepNuit];
+    const campClass=role.camp==='inf'?'infiltre':role.camp==='bon'?'or-col':'';
+    const progress=seq.map((r,i)=>`<div class="np-step${i<state.stepNuit?' done':i===state.stepNuit?' current':''}" title="${r.nom}"></div>`).join('');
+
+    // Sélection nocturne
+    const currentSel=state.nightSelections[state.stepNuit]||[];
+    let selectorHTML='';
+    if(role.maxSelect>0){
+      const alive=state.joueurs.filter(j=>!j.elimine);
+      const btnsCls=role.camp==='inf'?'inf':'';
+      const btns=alive.map(j=>{
+        const isSel=currentSel.includes(j.id);
+        return `<button class="night-player-btn${isSel?' selected '+btnsCls:''}" data-jid="${j.id}" onclick="toggleNightPlayer(${state.stepNuit},${j.id},${role.maxSelect},'${role.camp}')">${j.nom}</button>`;
+      }).join('');
+      const selNames=currentSel.map(id=>state.joueurs[id]?.nom||'?').join(', ');
+      const summaryClass=role.camp==='inf'?'inf':'';
+      selectorHTML=`
+        <div class="night-selector">
+          <div class="night-selector-label">${role.maxSelect===1?'Joueur désigné':role.maxSelect===2?'Deux joueurs désignés':`${role.maxSelect} joueurs désignés`}</div>
+          <div class="night-players-grid">${btns}</div>
+          <div class="selection-summary ${summaryClass}" id="selSummary${state.stepNuit}">
+            ${currentSel.length>0?`<strong>${selNames}</strong>`:'Aucune sélection.'}
+          </div>
+        </div>`;
+    }
+
+    // Log des désignations de cette nuit
+    const logHTML=buildNightLog(state.stepNuit);
+
+    area.innerHTML=`
+      <div class="phase-card">
+        <div class="phase-eyebrow">Étape ${state.stepNuit+1} / ${seq.length} — Phase de Nuit</div>
+        <div class="phase-title">La communauté dort…</div>
+        <div class="phase-desc">Tous les yeux sont fermés. Appelez le rôle suivant.</div>
+        <div class="night-progress">${progress}</div>
+        <div class="role-spotlight ${campClass}">
+          <div class="role-step">Rôle ${state.stepNuit+1} sur ${seq.length}</div>
+          <div class="role-name">${role.nom}</div>
+          <div class="role-instruction">${role.instruction}</div>
+          ${role.note?`<div class="role-note">💡 ${role.note}</div>`:''}
+          ${selectorHTML}
+        </div>
+        ${logHTML}
+      </div>`;
+
+  } else if(state.phase==='jour'){
+    dot.className='phase-dot jour'; lbl.textContent='Phase de Jour'; ctr.textContent=`Tour ${state.tour}`;
+    const rappels=[];
+    if(state.rolesActifs.has('lanceuse')){
+      const lSel=getNightSelForRole('lanceuse');
+      rappels.push(lSel?`Joueur bloqué par la Lanceuse d'Alerte (ne peut pas voter) : <strong>${lSel}</strong>`:"Annoncez le joueur bloqué par la Lanceuse d'Alerte.");
+    }
+    if(state.rolesActifs.has('interc')&&!state.intercAlt){
+      const iSel=getNightSelForRole('interc');
+      rappels.push(iSel?`Joueur "en prière" (Intercesseur, ne peut pas voter) : <strong>${iSel}</strong>`:'Annoncez le joueur "en prière" désigné par l\'Intercesseur.');
+    }
+    if(state.rolesActifs.has('martyr')&&!state.martyrFirst) rappels.push('Attention : si le Martyr est éliminé lors de ce premier vote de la partie, il gagne seul.');
+
+    area.innerHTML=`
+      <div class="phase-card">
+        <div class="phase-eyebrow">Phase de Jour — Tour ${state.tour}</div>
+        <div class="phase-title or">Le jour se lève.</div>
+        <div class="phase-desc">Annoncez les événements de la nuit, puis laissez le débat s'engager.</div>
+        ${rappels.length?`<div class="jour-info"><div class="jour-info-title">Rappels de début de journée</div><ul>${rappels.map(r=>`<li>${r}</li>`).join('')}</ul></div>`:''}
+        <div class="vote-section">
+          <div class="vote-title">Vote d'exclusion</div>
+          <div class="vote-desc">Clic gauche : ajouter un vote. Clic droit : retirer un vote.</div>
+          <div class="vote-leader" id="voteLeader">Aucun vote pour l'instant.</div>
+          <div class="vote-list" id="voteList"></div>
+          <div class="vote-actions">
+            <button class="btn-vote-action btn-vote-reset" onclick="resetVotes()">Réinitialiser</button>
+            <button class="btn-vote-action btn-vote-elim" onclick="eliminerLeader()">Éliminer le joueur en tête →</button>
+          </div>
+        </div>
+      </div>`;
+    renderVoteList();
+
+  } else if(state.phase==='victoire'){
+    dot.className='phase-dot fin'; lbl.textContent='Fin de partie'; ctr.textContent='';
+    renderVictory();
+  }
+}
+
+function renderEndNight(area, seq){
+  document.getElementById('phaseDot').className='phase-dot fin';
+  document.getElementById('phaseLabel').textContent='Bilan de la nuit';
+  // Log complet
+  const logItems=seq.map((r,i)=>{
+    const sel=(state.nightSelections[i]||[]).map(id=>state.joueurs[id]?.nom||'?');
+    const campCls=r.camp==='inf'?'inf':'';
+    return `<div class="night-log-item ${campCls}"><span>${r.nom}</span><span>${sel.length?sel.join(', '):'—'}</span></div>`;
+  }).join('');
+
+  const alive=state.joueurs.filter(j=>!j.elimine);
+  const elimBtns=alive.map(j=>{
+    const isSel=state.nightElimId===j.id;
+    return `<div class="end-night-player${isSel?' selected':''}" onclick="selectNightElim(${j.id})">${j.nom}</div>`;
+  }).join('');
+
+  area.innerHTML=`
+    <div class="phase-card">
+      <div class="phase-eyebrow">Fin de la nuit — Tour ${state.tour}</div>
+      <div class="phase-title rouge">Bilan nocturne</div>
+      <div class="phase-desc">Récapitulatif des actions de la nuit. Désignez ensuite l'éliminé avant de passer au jour.</div>
+      <div class="night-log">
+        <div class="night-log-title">Désignations de la nuit</div>
+        ${logItems||'<div class="night-log-item"><span>Aucun rôle actif.</span><span></span></div>'}
+      </div>
+      <div class="end-night-box" style="margin-top:20px">
+        <div class="end-night-title">Qui est emprisonné cette nuit ?</div>
+        <div class="end-night-desc">Cliquez sur le joueur éliminé par les Infiltrés (vérifiez les protections de l'Avocate et du Ministre). Cliquez sur "Personne" si personne n'est emprisonné.</div>
+        <div class="end-night-players" id="endNightPlayers">
+          <div class="end-night-player${state.nightElimId===null&&state._noElim?' selected':''}" onclick="selectNightElim(-1)">Personne</div>
+          ${elimBtns}
+        </div>
+        <button class="btn-confirm-elim" onclick="confirmNightElim()">Confirmer et passer au jour →</button>
+      </div>
+    </div>`;
+}
+
+function selectNightElim(id){
+  if(id===-1){ state.nightElimId=null; state._noElim=true; }
+  else { state.nightElimId=id; state._noElim=false; }
+  // Mettre à jour l'affichage
+  document.querySelectorAll('.end-night-player').forEach(el=>{
+    const jid=parseInt(el.getAttribute('onclick').match(/\d+/)?.[0]);
+    if(el.getAttribute('onclick')==='selectNightElim(-1)') el.classList.toggle('selected',state.nightElimId===null&&state._noElim);
+    else el.classList.toggle('selected',jid===state.nightElimId);
+  });
+}
+
+function confirmNightElim(){
+  if(state.nightElimId!==null) eliminerJoueur(state.nightElimId);
+  // Transition vers le jour
+  const overlay=document.getElementById('nightOverlay');
+  document.getElementById('nightOverlayText').textContent='Le jour se lève…';
+  overlay.classList.add('active');
+  setTimeout(()=>{
+    state.phase='jour';
+    if(state.rolesActifs.has('interc')) state.intercAlt=!state.intercAlt;
+    state.nightSelections={}; state.nightElimId=null; state._noElim=false;
+    renderContent(); renderPlayers();
+    setTimeout(()=>overlay.classList.remove('active'),400);
+  },800);
+}
+
+function buildNightLog(currentStep){
+  const entries=[];
+  const seq=getNightSequence();
+  for(let i=0;i<currentStep;i++){
+    const r=seq[i]; if(!r) continue;
+    const sel=(state.nightSelections[i]||[]).map(id=>state.joueurs[id]?.nom||'?');
+    if(sel.length===0) continue;
+    const campCls=r.camp==='inf'?'inf':'';
+    entries.push(`<div class="night-log-item ${campCls}"><span>${r.nom}</span><span>${sel.join(', ')}</span></div>`);
+  }
+  if(!entries.length) return '';
+  return `<div class="night-log" style="margin-top:14px"><div class="night-log-title">Désignations cette nuit</div>${entries.join('')}</div>`;
+}
+
+function getNightSelForRole(roleId){
+  const seq=getNightSequence();
+  const idx=seq.findIndex(r=>r.id===roleId);
+  if(idx===-1) return null;
+  const sel=(state.nightSelections[idx]||[]).map(id=>state.joueurs[id]?.nom||'?');
+  return sel.length?sel.join(', '):null;
+}
+
+// ===================== SÉLECTEUR NOCTURNE =====================
+function toggleNightPlayer(stepIdx, joueurId, maxSelect, camp){
+  if(!state.nightSelections[stepIdx]) state.nightSelections[stepIdx]=[];
+  const sel=state.nightSelections[stepIdx];
+  const pos=sel.indexOf(joueurId);
+  if(pos!==-1){ sel.splice(pos,1); }
+  else {
+    if(maxSelect===1){ state.nightSelections[stepIdx]=[joueurId]; }
+    else if(sel.length<maxSelect){ sel.push(joueurId); }
+    else { state.nightSelections[stepIdx]=[...sel.slice(1),joueurId]; }
+  }
+  // Mettre à jour sans re-render complet
+  const alive=state.joueurs.filter(j=>!j.elimine);
+  const btnsCls=camp==='inf'?'inf':'';
+  document.querySelectorAll('.night-player-btn').forEach(btn=>{
+    const jid=parseInt(btn.dataset.jid);
+    const isSel=state.nightSelections[stepIdx].includes(jid);
+    btn.className='night-player-btn'+(isSel?' selected '+btnsCls:'');
+  });
+  const selNames=state.nightSelections[stepIdx].map(id=>state.joueurs[id]?.nom||'?').join(', ');
+  const sumEl=document.getElementById(`selSummary${stepIdx}`);
+  if(sumEl) sumEl.innerHTML=selNames?`<strong>${selNames}</strong>`:'Aucune sélection.';
+  // Mettre à jour le log
+  const logArea=document.querySelector('.night-log');
+  const newLog=buildNightLog(stepIdx);
+  if(logArea&&newLog){ logArea.outerHTML=newLog; } else if(newLog){ document.querySelector('.phase-card')?.insertAdjacentHTML('beforeend',newLog); }
+}
+
+// ===================== VOTE =====================
+function renderVoteList(){
+  const list=document.getElementById('voteList'); if(!list) return;
+  const alive=state.joueurs.filter(j=>!j.elimine);
+  list.innerHTML='';
+  alive.forEach(j=>{
+    const div=document.createElement('div');
+    div.className='vote-player'+(j.votes>0?' has-votes':'');
+    div.innerHTML=`<span class="vote-pname">${j.nom}</span><span class="vote-count">${j.votes||0}</span>`;
+    div.addEventListener('click',()=>{ state.joueurs[j.id].votes=(state.joueurs[j.id].votes||0)+1; renderVoteList(); updateVoteLeader(); renderPlayers(); });
+    div.addEventListener('contextmenu',e=>{ e.preventDefault(); if(state.joueurs[j.id].votes>0)state.joueurs[j.id].votes--; renderVoteList(); updateVoteLeader(); renderPlayers(); });
+    list.appendChild(div);
+  });
+  updateVoteLeader();
+}
+
+function updateVoteLeader(){
+  const ldr=document.getElementById('voteLeader'); if(!ldr) return;
+  const alive=state.joueurs.filter(j=>!j.elimine&&j.votes>0);
+  if(!alive.length){ldr.innerHTML='Aucun vote pour l\'instant.'; return;}
+  const max=Math.max(...alive.map(j=>j.votes));
+  const leaders=alive.filter(j=>j.votes===max);
+  ldr.innerHTML=leaders.length===1?`En tête : <strong>${leaders[0].nom}</strong> avec ${max} vote${max>1?'s':''}.`:
+    `Égalité : <strong>${leaders.map(j=>j.nom).join(' / ')}</strong> — la voix du Sage départage.`;
+}
+
+function resetVotes(){ state.joueurs.forEach(j=>j.votes=0); renderVoteList(); updateVoteLeader(); renderPlayers(); }
+
+function eliminerLeader(){
+  const alive=state.joueurs.filter(j=>!j.elimine&&j.votes>0);
+  if(!alive.length) return;
+  const max=Math.max(...alive.map(j=>j.votes));
+  const leaders=alive.filter(j=>j.votes===max);
+  if(leaders.length===1){
+    if(state.rolesActifs.has('martyr')&&!state.martyrFirst) state.martyrFirst=true;
+    eliminerJoueur(leaders[0].id); resetVotes();
+  } else { alert('Égalité ! La voix du Sage départage. Résolvez manuellement puis cliquez ✕ pour éliminer le joueur.'); }
+}
+
+// ===================== NAVIGATION =====================
+function nextStep(){
+  if(state.phase==='nuit'){
+    const seq=getNightSequence();
+    state.stepNuit++;
+    renderContent();
+  } else if(state.phase==='jour'){
+    resetVotes();
+    const overlay=document.getElementById('nightOverlay');
+    document.getElementById('nightOverlayText').textContent='La nuit tombe…';
+    overlay.classList.add('active');
+    setTimeout(()=>{
+      state.tour++; state.phase='nuit'; state.stepNuit=0;
+      state.nightSelections={}; state.nightElimId=null; state._noElim=false;
+      renderContent(); renderPlayers();
+      setTimeout(()=>overlay.classList.remove('active'),400);
+    },800);
+  }
+}
+
+function prevStep(){
+  if(state.phase==='nuit'&&state.stepNuit>0){ state.stepNuit--; renderContent(); }
+  else if(state.phase==='jour'){ state.phase='nuit'; const seq=getNightSequence(); state.stepNuit=seq.length; renderContent(); }
+}
+
+// ===================== VICTOIRE =====================
+function checkVictory(){
+  const alive=state.joueurs.filter(j=>!j.elimine);
+  if(alive.length<=1){ state.phase='victoire'; renderContent(); }
+}
+
+function renderVictory(){
+  const area=document.getElementById('contentArea');
+  const alive=state.joueurs.filter(j=>!j.elimine);
+  area.innerHTML=`
+    <div class="victory-screen">
+      <div class="victory-emoji">✝️</div>
+      <div class="victory-title" style="color:var(--or)">Fin de partie</div>
+      <div class="victory-desc">
+        La partie se termine au tour ${state.tour}.<br>
+        ${alive.length?`Survivants : <strong>${alive.map(j=>j.nom).join(', ')}</strong>`:'Plus aucun survivant.'}<br><br>
+        <em style="font-size:.82rem;color:var(--gris2)">
+          Chrétiens gagnent si tous les Infiltrés sont identifiés.<br>
+          Infiltrés gagnent s'ils sont plus nombreux que les Chrétiens.<br>
+          ${state.rolesActifs.has('journaliste')?'Journaliste gagne s\'il est le dernier Chrétien en vie.<br>':''}
+          ${state.rolesActifs.has('martyr')?'Martyr gagne s\'il a été le premier éliminé par vote.':''}
+        </em>
+      </div>
+      <button class="btn-restart" onclick="location.reload()">Nouvelle partie</button>
+    </div>`;
+}
+</script>
+</body>
+</html>
