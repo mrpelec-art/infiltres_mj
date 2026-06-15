@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Infiltrés - MJ</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --noir:#0D0B12;--noir2:#15111F;--noir3:#1E1830;
+  --violet:#3B1060;--violet2:#6B3FA0;--violet3:#9B6FD0;
+  --or:#C8960C;--or2:#E8B820;
+  --creme:#F0EBE0;--creme2:#C8C0B0;
+  --rouge:#8B1A1A;--rouge2:#C43030;
+  --vert:#1A5C2A;--vert2:#2E8B45;
+  --gris:#3A3550;--gris2:#5A5570;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;background:var(--noir);color:var(--creme);min-height:100vh;overflow-x:hidden;}
+
+/* ===== UTILITAIRES ===== */
+.serif{font-family:Georgia,'Times New Roman',serif;}
+.hidden{display:none!important;}
+.fade{animation:fadeIn .4s ease-out;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== SETUP ===== */
+#screen-setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:32px 16px;background:radial-gradient(ellipse at 50% 25%,#2A1050 0%,var(--noir) 70%);}
+.logo-title{font-family:Georgia,serif;font-size:clamp(2rem,6vw,3.8rem);font-weight:700;letter-spacing:.12em;color:var(--creme);text-align:center;margin-bottom:6px;}
+.logo-sub{font-family:Georgia,serif;font-size:.85rem;letter-spacing:.35em;color:var(--or);text-align:center;text-transform:uppercase;margin-bottom:36px;}
+.setup-card{background:var(--noir2);border:1px solid var(--violet);border-radius:12px;padding:28px;width:100%;max-width:600px;box-shadow:0 0 50px rgba(59,16,96,.4);}
+.setup-tabs{display:flex;border-bottom:1px solid var(--gris);margin-bottom:24px;}
+.stab{flex:1;padding:10px;background:none;border:none;color:var(--gris2);font-size:.78rem;letter-spacing:.1em;font-family:Georgia,serif;cursor:pointer;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .15s;}
+.stab.active{color:var(--or);border-bottom-color:var(--or);}
+.spanel{display:none;}.spanel.active{display:block;}
+.field-label{font-size:.72rem;letter-spacing:.1em;color:var(--creme2);text-transform:uppercase;margin-bottom:8px;display:block;}
+.nb-input{width:100%;background:var(--noir3);border:1px solid var(--gris);border-radius:8px;color:var(--creme);font-family:Georgia,serif;font-size:1.8rem;text-align:center;padding:14px;margin-bottom:20px;outline:none;}
+.nb-input:focus{border-color:var(--violet2);}
+
+/* Grille rôles */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:20px;max-height:280px;overflow-y:auto;padding-right:4px;}
+.role-grid::-webkit-scrollbar{width:3px;}.role-grid::-webkit-scrollbar-thumb{background:var(--violet);border-radius:2px;}
+.rtog{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid var(--gris);background:var(--noir3);cursor:pointer;transition:all .15s;user-select:none;}
+.rtog:hover{border-color:var(--violet2);}
+.rtog.active{border-color:var(--violet3);background:rgba(107,63,160,.2);}
+.rtog.active.inf{border-color:var(--rouge2);background:rgba(139,26,26,.2);}
+.rtog.active.neu{border-color:var(--vert2);background:rgba(26,92,42,.2);}
+.rdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rdot.chr{background:var(--violet3);}.rdot.inf{background:var(--rouge2);}.rdot.neu{background:var(--vert2);}.rdot.bon{background:var(--or);}
+.rtog span{font-size:.78rem;color:var(--creme2);}
+.rtog.active span{color:var(--creme);}
+
+/* Alternance */
+.alt-section{background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:14px;margin-bottom:16px;}
+.alt-title{font-size:.7rem;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:10px;}
+.alt-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:.82rem;color:var(--creme2);}
+.alt-toggle{display:flex;gap:0;border:1px solid var(--gris);border-radius:6px;overflow:hidden;}
+.alt-btn{padding:5px 14px;background:var(--noir);border:none;color:var(--gris2);font-size:.75rem;cursor:pointer;transition:all .15s;}
+.alt-btn.active{background:var(--violet2);color:var(--creme);}
+
+/* Attribution */
+.assign-grid{display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto;margin-bottom:16px;padding-right:4px;}
+.assign-grid::-webkit-scrollbar{width:3px;}.assign-grid::-webkit-scrollbar-thumb{background:var(--violet);border-radius:2px;}
+.assign-lbl{font-size:.8rem;color:var(--creme2);}
+.assign-nom{background:var(--noir3);border:1px solid var(--gris);border-radius:6px;color:var(--creme);font-size:.8rem;padding:6px 8px;outline:none;width:100%;}
+.assign-nom:focus{border-color:var(--violet2);}
+.assign-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;}
+.assign-sel{background:var(--noir3);border:1px solid var(--gris);border-radius:6px;color:var(--creme);font-size:.78rem;padding:7px 8px;outline:none;width:100%;}
+.assign-sel:focus{border-color:var(--violet2);}
+.assign-sel.inf{border-color:var(--rouge);color:var(--rouge2);}
+.assign-sel.chr{border-color:var(--violet);}
+.assign-sel.neu{border-color:var(--vert2);color:var(--vert2);}
+.assign-sel.bon{border-color:var(--or);color:var(--or);}
+
+/* Sage setup */
+.sage-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.sage-sel{background:var(--noir3);border:1px solid var(--or);border-radius:6px;color:var(--or);font-size:.8rem;padding:7px 10px;outline:none;flex:1;min-width:120px;}
+
+.btn-primary{width:100%;padding:16px;background:linear-gradient(135deg,var(--violet),var(--violet2));border:none;border-radius:8px;color:var(--creme);font-family:Georgia,serif;font-size:.95rem;letter-spacing:.12em;cursor:pointer;transition:all .2s;}
+.btn-primary:hover{background:linear-gradient(135deg,var(--violet2),var(--violet3));transform:translateY(-1px);}
+.btn-sec{width:100%;padding:12px;background:transparent;border:1px solid var(--violet);border-radius:8px;color:var(--violet3);font-family:Georgia,serif;font-size:.8rem;letter-spacing:.08em;cursor:pointer;margin-bottom:8px;transition:all .15s;}
+.btn-sec:hover{background:rgba(107,63,160,.15);}
+
+/* ===== GAME LAYOUT ===== */
+#screen-game{display:none;height:100vh;overflow:hidden;}
+.game-layout{display:grid;grid-template-columns:250px 1fr;height:100vh;}
+
+/* Panneau gauche */
+.panel-left{background:var(--noir2);border-right:1px solid var(--gris);display:flex;flex-direction:column;overflow:hidden;}
+.panel-hdr{padding:12px 14px;border-bottom:1px solid var(--gris);background:var(--noir3);display:flex;justify-content:space-between;align-items:center;}
+.panel-hdr h3{font-family:Georgia,serif;font-size:.65rem;letter-spacing:.25em;color:var(--or);text-transform:uppercase;}
+.sage-indicator{font-size:.65rem;color:var(--or);background:rgba(200,150,12,.15);border:1px solid rgba(200,150,12,.3);border-radius:10px;padding:2px 8px;cursor:pointer;}
+.players-list{flex:1;overflow-y:auto;padding:6px;}
+.players-list::-webkit-scrollbar{width:3px;}.players-list::-webkit-scrollbar-thumb{background:var(--violet);border-radius:2px;}
+
+.pcard{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-radius:7px;border:1px solid transparent;margin-bottom:3px;transition:all .15s;}
+.pcard:hover:not(.elim){border-color:var(--violet2);background:rgba(107,63,160,.08);}
+.pcard.elim{opacity:.3;}
+.pcard.night-hi{border-color:var(--or)!important;background:rgba(200,150,12,.1)!important;}
+.pcard.couple-hi{border-color:var(--vert2)!important;background:rgba(46,139,69,.08)!important;}
+.pleft{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.pname{font-size:.82rem;font-weight:500;color:var(--creme);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pcard.elim .pname{text-decoration:line-through;color:var(--gris2);}
+.prole{font-size:.6rem;color:var(--gris2);font-style:italic;}
+.prole.inf{color:var(--rouge2);}.prole.chr{color:var(--violet3);}.prole.neu{color:var(--vert2);}.prole.bon{color:var(--or);}
+.pright{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.vbadge{background:var(--rouge);color:var(--creme);font-size:.65rem;font-weight:700;width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center;}
+.vbadge.vis{display:flex;}
+.elim-btn{width:18px;height:18px;border-radius:50%;border:1px solid var(--gris2);background:transparent;color:var(--gris2);font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.elim-btn:hover{border-color:var(--rouge2);color:var(--rouge2);}
+.pcard.elim .elim-btn{display:none;}
+.revive-btn{width:18px;height:18px;border-radius:50%;border:1px solid var(--gris);background:transparent;color:var(--gris2);font-size:.6rem;cursor:pointer;display:none;align-items:center;justify-content:center;}
+.pcard.elim .revive-btn{display:flex;}
+.revive-btn:hover{border-color:var(--vert2);color:var(--vert2);}
+
+.score-bar{padding:8px 12px;border-top:1px solid var(--gris);display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.sc-item{text-align:center;padding:6px;border-radius:5px;}
+.sc-item.chr{background:rgba(59,16,96,.3);border:1px solid var(--violet);}
+.sc-item.inf{background:rgba(139,26,26,.3);border:1px solid var(--rouge);}
+.sc-num{font-family:Georgia,serif;font-size:1.2rem;font-weight:700;}
+.sc-item.chr .sc-num{color:var(--violet3);}.sc-item.inf .sc-num{color:var(--rouge2);}
+.sc-lbl{font-size:.55rem;letter-spacing:.08em;color:var(--creme2);text-transform:uppercase;}
+
+/* Zone principale */
+.main-area{display:flex;flex-direction:column;overflow:hidden;}
+.phase-nav{display:flex;align-items:center;justify-content:space-between;padding:9px 20px;background:var(--noir3);border-bottom:1px solid var(--gris);flex-shrink:0;}
+.phase-ind{display:flex;align-items:center;gap:9px;}
+.pdot{width:9px;height:9px;border-radius:50%;}
+.pdot.nuit{background:var(--violet3);box-shadow:0 0 7px var(--violet3);}
+.pdot.jour{background:var(--or);box-shadow:0 0 7px var(--or);}
+.pdot.fin{background:var(--rouge2);}
+.plbl{font-family:Georgia,serif;font-size:.7rem;letter-spacing:.18em;color:var(--creme2);text-transform:uppercase;}
+.tctr{font-family:Georgia,serif;font-size:.7rem;color:var(--gris2);}
+.nav-btns{display:flex;gap:6px;}
+.btn-nav{padding:7px 16px;border-radius:6px;border:1px solid var(--gris);background:transparent;color:var(--creme2);font-size:.75rem;cursor:pointer;transition:all .15s;}
+.btn-nav:hover{border-color:var(--violet2);color:var(--creme);}
+.btn-nav.prim{background:var(--violet);border-color:var(--violet2);color:var(--creme);}
+.btn-nav.prim:hover{background:var(--violet2);}
+.btn-nav:disabled{opacity:.35;cursor:default;}
+
+.content-area{flex:1;overflow-y:auto;padding:24px 32px;}
+.content-area::-webkit-scrollbar{width:5px;}.content-area::-webkit-scrollbar-thumb{background:var(--violet);border-radius:3px;}
+
+/* Cards de phase */
+.pc{animation:fadeIn .45s ease-out;}
+.eyebrow{font-family:Georgia,serif;font-size:.6rem;letter-spacing:.3em;color:var(--or);text-transform:uppercase;margin-bottom:8px;}
+.ptitle{font-family:Georgia,serif;font-size:clamp(1.4rem,3vw,2rem);font-weight:700;color:var(--creme);margin-bottom:6px;line-height:1.2;}
+.ptitle.rouge{color:var(--rouge2);}.ptitle.or{color:var(--or2);}.ptitle.vert{color:var(--vert2);}
+.pdesc{font-size:.85rem;color:var(--creme2);line-height:1.7;margin-bottom:20px;max-width:580px;}
+
+/* Progression nuit */
+.night-prog{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;}
+.np{height:4px;border-radius:2px;background:var(--gris);flex:1;min-width:16px;transition:background .3s;}
+.np.done{background:var(--violet2);}.np.cur{background:var(--or);}
+
+/* Spotlight rôle */
+.rspot{background:var(--noir2);border:1px solid var(--violet);border-radius:10px;padding:20px 24px;margin-bottom:16px;position:relative;overflow:visible;}
+.rspot::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--violet3),transparent);}
+.rspot.inf{border-color:var(--rouge);}.rspot.inf::before{background:linear-gradient(90deg,transparent,var(--rouge2),transparent);}
+.rspot.neu{border-color:var(--vert);}.rspot.neu::before{background:linear-gradient(90deg,transparent,var(--vert2),transparent);}
+.rspot.or{border-color:var(--or);}.rspot.or::before{background:linear-gradient(90deg,transparent,var(--or),transparent);}
+.rstep{font-size:.6rem;letter-spacing:.25em;color:var(--gris2);text-transform:uppercase;margin-bottom:5px;}
+.rname{font-family:Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--creme);margin-bottom:12px;}
+.rspot.inf .rname{color:var(--rouge2);}.rspot.neu .rname{color:var(--vert2);}.rspot.or .rname{color:var(--or);}
+.rinstr{font-size:.85rem;color:var(--creme2);line-height:1.7;border-left:2px solid var(--violet2);padding-left:12px;margin-bottom:12px;}
+.rspot.inf .rinstr{border-left-color:var(--rouge2);}.rspot.neu .rinstr{border-left-color:var(--vert2);}.rspot.or .rinstr{border-left-color:var(--or);}
+.rnote{font-size:.73rem;color:var(--gris2);font-style:italic;line-height:1.5;margin-bottom:12px;}
+
+/* Info boxes */
+.info-box{border-radius:8px;padding:12px 16px;margin-bottom:12px;}
+.info-box.violet{background:rgba(59,16,96,.2);border:1px solid rgba(107,63,160,.4);}
+.info-box.rouge{background:rgba(139,26,26,.2);border:1px solid rgba(196,48,48,.4);}
+.info-box.or{background:rgba(200,150,12,.1);border:1px solid rgba(200,150,12,.35);}
+.info-box.vert{background:rgba(26,92,42,.2);border:1px solid rgba(46,139,69,.4);}
+.info-box-title{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px;font-family:Georgia,serif;}
+.info-box.violet .info-box-title{color:var(--violet3);}
+.info-box.rouge .info-box-title{color:var(--rouge2);}
+.info-box.or .info-box-title{color:var(--or);}
+.info-box.vert .info-box-title{color:var(--vert2);}
+.info-box p,.info-box li{font-size:.8rem;color:var(--creme2);line-height:1.6;}
+.info-box ul{list-style:none;}.info-box li{padding-left:12px;position:relative;}.info-box li::before{content:'—';position:absolute;left:0;color:var(--gris2);}
+.info-box strong{color:var(--creme);}
+
+/* Sélecteur joueurs nuit */
+.nsel-label{font-size:.65rem;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:8px;}
+.nsel-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.nsel-btn{padding:6px 12px;border-radius:16px;border:1px solid var(--gris);background:var(--noir3);color:var(--creme2);font-size:.76rem;cursor:pointer;transition:all .15s;user-select:none;}
+.nsel-btn:hover{border-color:var(--violet2);color:var(--creme);}
+.nsel-btn.sel{border-color:var(--or);background:rgba(200,150,12,.15);color:var(--or2);font-weight:600;}
+.nsel-btn.sel.inf{border-color:var(--rouge2);background:rgba(196,48,48,.15);color:var(--rouge2);}
+.nsel-btn.sel.vert{border-color:var(--vert2);background:rgba(46,139,69,.15);color:var(--vert2);}
+.nsel-summary{font-size:.75rem;color:var(--creme2);min-height:1.1em;}
+.nsel-summary strong{color:var(--or);}
+
+/* Ministre pouvoirs */
+.ministre-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.minist-btn{padding:8px 16px;border-radius:6px;border:1px solid var(--violet);background:transparent;color:var(--violet3);font-size:.78rem;cursor:pointer;transition:all .15s;}
+.minist-btn:hover{background:rgba(107,63,160,.2);}
+.minist-btn.used{border-color:var(--gris);color:var(--gris2);cursor:default;text-decoration:line-through;}
+.minist-btn.used:hover{background:transparent;}
+
+/* Rôle reveal (hackeuse) */
+.role-reveal{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:6px;border:1px solid var(--violet3);background:rgba(107,63,160,.2);font-size:.82rem;font-weight:600;color:var(--violet3);}
+.role-reveal.inf{border-color:var(--rouge2);background:rgba(196,48,48,.2);color:var(--rouge2);}
+
+/* Fin de nuit */
+.end-night-box{background:var(--noir2);border:1px solid var(--rouge);border-radius:10px;padding:20px 24px;margin-bottom:16px;position:relative;overflow:visible;}
+.end-night-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--rouge2),transparent);}
+.end-title{font-family:Georgia,serif;font-size:.95rem;color:var(--rouge2);margin-bottom:5px;letter-spacing:.06em;}
+.end-desc{font-size:.78rem;color:var(--gris2);margin-bottom:14px;line-height:1.5;}
+.end-players{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.end-pbtn{padding:7px 14px;border-radius:16px;border:1px solid var(--gris);background:var(--noir3);color:var(--creme2);font-size:.78rem;cursor:pointer;transition:all .15s;}
+.end-pbtn:hover{border-color:var(--rouge2);}
+.end-pbtn.sel{border-color:var(--rouge2);background:rgba(139,26,26,.25);color:var(--rouge2);font-weight:600;}
+.end-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-confirm{padding:9px 20px;border-radius:6px;border:1px solid var(--rouge);background:transparent;color:var(--rouge2);font-size:.78rem;cursor:pointer;transition:all .15s;}
+.btn-confirm:hover{background:var(--rouge);color:var(--creme);}
+.btn-skip{padding:9px 20px;border-radius:6px;border:1px solid var(--gris);background:transparent;color:var(--gris2);font-size:.78rem;cursor:pointer;transition:all .15s;}
+.btn-skip:hover{border-color:var(--creme2);color:var(--creme2);}
+
+/* Night log */
+.night-log{background:rgba(59,16,96,.1);border:1px solid rgba(107,63,160,.25);border-radius:7px;padding:12px 16px;margin-top:12px;}
+.nl-title{font-size:.6rem;letter-spacing:.18em;color:var(--violet3);text-transform:uppercase;margin-bottom:7px;}
+.nl-item{font-size:.75rem;color:var(--creme2);padding:2px 0;display:flex;gap:8px;}
+.nl-item .nl-role{color:var(--violet3);font-weight:600;min-width:130px;}
+.nl-item.inf .nl-role{color:var(--rouge2);}
+
+/* Phase jour */
+.jour-rappels{background:rgba(200,150,12,.08);border:1px solid rgba(200,150,12,.3);border-radius:8px;padding:16px 20px;margin-bottom:16px;}
+.jr-title{font-family:Georgia,serif;font-size:.7rem;letter-spacing:.18em;color:var(--or);text-transform:uppercase;margin-bottom:8px;}
+.jr-item{font-size:.8rem;color:var(--creme2);padding:3px 0 3px 12px;position:relative;line-height:1.5;}
+.jr-item::before{content:'—';position:absolute;left:0;color:var(--or);}
+.jr-item strong{color:var(--creme);}
+.jr-item.warn{color:var(--or2);}
+
+/* Vote */
+.vote-section{background:var(--noir2);border:1px solid var(--rouge);border-radius:10px;padding:20px 24px;margin-bottom:16px;position:relative;overflow:visible;}
+.vote-section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--rouge2),transparent);}
+.vote-title{font-family:Georgia,serif;font-size:.9rem;letter-spacing:.06em;color:var(--rouge2);margin-bottom:5px;}
+.vote-desc{font-size:.76rem;color:var(--gris2);margin-bottom:12px;line-height:1.5;}
+.vote-leader{font-size:.78rem;color:var(--creme2);margin-bottom:10px;min-height:1.1em;}
+.vote-leader strong{color:var(--rouge2);}
+.vote-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:14px;}
+.vplayer{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:7px;border:1px solid var(--gris);background:var(--noir3);transition:all .15s;user-select:none;}
+.vote-controls{display:flex;align-items:center;gap:6px;}
+.vbtn-pm{width:26px;height:26px;border-radius:50%;border:1px solid var(--gris);background:transparent;color:var(--creme2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;line-height:1;}
+.vbtn-pm.plus:hover{border-color:var(--rouge2);color:var(--rouge2);}
+.vbtn-pm.minus:hover{border-color:var(--creme2);color:var(--creme);}
+.vbtn-pm:disabled{opacity:.25;cursor:default;}
+.vplayer:hover{border-color:var(--rouge2);background:rgba(139,26,26,.1);}
+.vpname{font-size:.8rem;color:var(--creme);}
+.vcount{font-family:Georgia,serif;font-size:1rem;font-weight:700;color:var(--rouge2);min-width:16px;text-align:center;}
+.vote-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.vbtn{padding:7px 14px;border-radius:6px;border:1px solid;background:transparent;font-size:.76rem;cursor:pointer;transition:all .15s;}
+.vbtn.reset{border-color:var(--gris);color:var(--gris2);}.vbtn.reset:hover{border-color:var(--creme2);color:var(--creme2);}
+.vbtn.elim{border-color:var(--rouge);color:var(--rouge2);}.vbtn.elim:hover{background:var(--rouge);color:var(--creme);}
+
+/* Victoire */
+.victory{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;padding:40px;}
+.v-icon{font-size:3rem;margin-bottom:16px;}
+.v-title{font-family:Georgia,serif;font-size:clamp(1.6rem,4vw,2.6rem);font-weight:700;margin-bottom:12px;}
+.v-desc{font-size:.88rem;color:var(--creme2);max-width:420px;line-height:1.7;margin-bottom:24px;}
+.btn-restart{padding:12px 28px;border-radius:8px;background:var(--violet);border:1px solid var(--violet2);color:var(--creme);font-family:Georgia,serif;font-size:.88rem;letter-spacing:.1em;cursor:pointer;}
+
+/* Overlay */
+.night-overlay{position:fixed;inset:0;background:#000;z-index:100;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .4s;}
+.night-overlay.active{opacity:1;}
+.night-text{font-family:Georgia,serif;font-size:1.3rem;letter-spacing:.35em;color:var(--violet3);text-transform:uppercase;}
+
+/* Modal Sage */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;}
+.reveal-overlay{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;cursor:pointer;}
+.hack-confirm-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;padding:16px 20px;background:var(--noir2);border-top:1px solid var(--violet);display:none;}
+.hack-confirm-bar.visible{display:block;}
+.hack-confirm-btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--violet),var(--violet2));border:none;border-radius:10px;color:var(--creme);font-family:Georgia,serif;font-size:1rem;letter-spacing:.1em;cursor:pointer;}
+.reveal-overlay.inf{background:rgba(60,0,0,.97);}
+.reveal-overlay.chr{background:rgba(20,8,40,.97);}
+.reveal-overlay.jou{background:rgba(40,28,0,.97);}
+.reveal-nom{font-size:.8rem;letter-spacing:.25em;text-transform:uppercase;margin-bottom:16px;opacity:.7;}
+.reveal-role{font-family:Georgia,serif;font-size:clamp(2.5rem,10vw,4rem);font-weight:700;text-align:center;margin-bottom:32px;}
+.reveal-close{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;opacity:.5;border:1px solid currentColor;padding:8px 20px;border-radius:20px;}
+.modal{background:var(--noir2);border:1px solid var(--or);border-radius:12px;padding:28px;width:90%;max-width:360px;}
+.modal h3{font-family:Georgia,serif;color:var(--or);font-size:1rem;margin-bottom:16px;letter-spacing:.08em;}
+.modal-sel{width:100%;background:var(--noir3);border:1px solid var(--or);border-radius:6px;color:var(--or);font-size:.85rem;padding:10px;margin-bottom:16px;outline:none;}
+.modal-actions{display:flex;gap:8px;}
+.modal-btn{flex:1;padding:10px;border-radius:6px;border:1px solid;background:transparent;font-size:.8rem;cursor:pointer;}
+.modal-btn.ok{border-color:var(--or);color:var(--or);}.modal-btn.ok:hover{background:rgba(200,150,12,.15);}
+.modal-btn.cancel{border-color:var(--gris);color:var(--gris2);}
+
+@media(max-width:680px){.game-layout{grid-template-columns:1fr}.panel-left{display:none}}
+</style>
+</head>
+<body>
+
+<div id="hackRevealBtn" onclick="revealHack()" style="display:none;margin-top:14px;padding:20px 16px;border-radius:10px;text-align:center;cursor:pointer;width:100%;">
+  <div style="font-size:.62rem;letter-spacing:.2em;color:var(--gris2);text-transform:uppercase;margin-bottom:8px;">Appuyer pour afficher en plein écran</div>
+  <div class="hrb-name" style="font-family:Georgia,serif;font-size:1.6rem;font-weight:700;margin-bottom:10px;"></div>
+  <div style="font-size:.7rem;letter-spacing:.12em;color:var(--gris2);text-transform:uppercase;">▶ Plein écran</div>
+</div>
+<div class="night-overlay" id="nightOverlay"><div class="night-text" id="nightTxt">La nuit tombe…</div></div>
+
+<!-- SETUP -->
+<div id="screen-setup">
+  <div class="logo-title">LES INFILTRÉS</div>
+  <div class="logo-sub">Outil du Maître du Jeu</div>
+  <div class="setup-card">
+    <div class="setup-tabs">
+      <button class="stab active" onclick="switchTab(0)">① Joueurs & Rôles</button>
+      <button class="stab" onclick="switchTab(1)">② Attribution</button>
+      <button class="stab" onclick="switchTab(2)">③ Options</button>
+    </div>
+
+    <!-- Panneau 1 : joueurs & rôles -->
+    <div class="spanel active" id="sp0">
+      <label class="field-label">Nombre de joueurs</label>
+      <input type="number" class="nb-input" id="nbJ" min="7" max="20" value="10" oninput="onNbChange()">
+      <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+        <div class="field-label" style="margin-bottom:10px">Hackeuse : que lui montrer ?</div>
+        <div style="display:flex;gap:8px;">
+          <button class="alt-btn active" id="hackModeRoleBtn" onclick="setHackMode('role')">Rôle complet</button>
+          <button class="alt-btn" id="hackModeCatBtn" onclick="setHackMode('categorie')">Catégorie seulement</button>
+        </div>
+        <div style="font-size:.7rem;color:var(--gris2);margin-top:8px;line-height:1.5;" id="hackModeDesc">Affiche le rôle exact (ex. "Entremetteuse").</div>
+      </div>
+      <div id="ratioBox" style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:.75rem;color:var(--creme2);">Ratio recommandé</div>
+        <div id="ratioText" style="font-family:Georgia,serif;font-size:.9rem;color:var(--or);font-weight:600;">—</div>
+      </div>
+      <label class="field-label">Rôles présents dans cette partie</label>
+      <div class="role-grid" id="roleGrid"></div>
+      <button class="btn-sec" onclick="switchTab(1)">Suivant : nommer & attribuer les rôles →</button>
+      <button class="btn-primary" onclick="startGame()">Commencer sans attribution</button>
+    </div>
+
+    <!-- Panneau 2 : attribution -->
+    <div class="spanel" id="sp1">
+      <label class="field-label">Nom du joueur &amp; rôle attribué</label>
+      <div class="assign-grid" id="assignGrid"></div>
+      <label class="field-label">Sage (titre honorifique)</label>
+      <div class="sage-row">
+        <select class="sage-sel" id="sageSetupSel"><option value="">— Personne —</option></select>
+      </div>
+      <button class="btn-primary" onclick="startGame()">Commencer la partie →</button>
+    </div>
+
+    <!-- Panneau 3 : options -->
+    <div class="spanel" id="sp2">
+      <div class="alt-section" id="altSection">
+        <div class="alt-title">Alternance des rôles</div>
+        <div id="altRows"></div>
+      </div>
+      <button class="btn-primary" onclick="startGame()">Commencer la partie →</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game">
+  <div class="game-layout">
+    <!-- Colonne gauche -->
+    <div class="panel-left">
+      <div class="panel-hdr">
+        <h3>Joueurs</h3>
+        <div class="sage-indicator" onclick="openSageModal()" id="sageIndicator">⭐ Sage : —</div>
+      </div>
+      <div class="players-list" id="playersList"></div>
+      <div class="score-bar">
+        <div class="sc-item chr"><div class="sc-num" id="scAlive">—</div><div class="sc-lbl">En jeu</div></div>
+        <div class="sc-item inf"><div class="sc-num" id="scElim">0</div><div class="sc-lbl">Éliminés</div></div>
+      </div>
+    </div>
+    <!-- Zone principale -->
+    <div class="main-area">
+      <div class="phase-nav">
+        <div class="phase-ind"><div class="pdot" id="pdot"></div><div class="plbl" id="plbl">—</div></div>
+        <div class="tctr" id="tctr"></div>
+        <div class="nav-btns">
+          <button class="btn-nav" id="btnPrev" onclick="prevStep()">← Retour</button>
+          <button class="btn-nav prim" id="btnNext" onclick="nextStep()">Suivant →</button>
+        </div>
+      </div>
+      <div class="content-area" id="contentArea"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay révélation Hackeuse -->
+<div class="reveal-overlay hidden" id="revealOverlay" onclick="hideRevealOverlay()">
+  <div class="reveal-nom" id="revealNom"></div>
+  <div class="reveal-role" id="revealRole"></div>
+  <div class="reveal-close">Appuyer pour fermer</div>
+</div>
+
+<!-- Modal Sage -->
+<div class="modal-bg hidden" id="sageModal">
+  <div class="modal">
+    <h3>⭐ Changer le Sage</h3>
+    <select class="modal-sel" id="sageSel"></select>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeSageModal()">Annuler</button>
+      <button class="modal-btn ok" onclick="confirmSage()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DONNÉES
+// ============================================================
+const RDEFS = [
+  {id:'pasteur',  nom:'Pasteur',           camp:'chr',ordre:1, nuit1:false,recur:false,maxSel:0,altKey:null,
+   instr:'Le Pasteur ne se réveille pas la nuit. Il doit être désigné <strong>deux fois lors de deux nuits différentes</strong> par les Infiltrés pour être emprisonné. Lui seul sait qu\'il a ce rôle.',
+   note:'Aucun réveil nocturne. Notez-le simplement dans votre feuille de suivi.'},
+  {id:'agentd',  nom:'Agent Double',       camp:'bon',ordre:2, nuit1:true, recur:false,maxSel:0,altKey:null,
+   instr:'Montrez à l\'Agent Double deux cartes non distribuées. Il choisit silencieusement l\'une d\'elles comme nouveau rôle jusqu\'à la fin de la partie.',
+   note:'Nécessite 2 cartes supplémentaires dans le deck.'},
+  {id:'entrem',  nom:'Entremetteuse',      camp:'chr',ordre:3, nuit1:true, recur:false,maxSel:2,altKey:null,
+   instr:'L\'Entremetteuse désigne deux joueurs qui formeront un couple pour toute la partie. Si l\'un meurt, l\'autre meurt immédiatement.',
+   note:'Si les deux sont de camps opposés, leurs conditions de victoire sont croisées.'},
+  {id:'prophete',nom:'Prophète',           camp:'chr',ordre:4, nuit1:false,recur:true, maxSel:0,altKey:null,
+   instr:'Vérifiez si l\'un des deux voisins directs du Prophète est un Infiltré. Si oui, faites-lui un signe discret. Il sait qu\'un voisin est suspect, mais ignore lequel.',
+   note:'Signe très discret — personne d\'autre ne doit voir.'},
+  {id:'hackeuse',nom:'Hackeuse',           camp:'chr',ordre:5, nuit1:false,recur:true, maxSel:1,altKey:null,
+   instr:'La Hackeuse désigne un joueur dont elle veut connaître l\'identité. Montrez-lui sa carte discrètement.',
+   note:'Soulevez toujours plusieurs cartes pour brouiller les pistes.'},
+  {id:'avocate', nom:'Avocate',            camp:'chr',ordre:6, nuit1:false,recur:true, maxSel:1,altKey:null,
+   instr:'L\'Avocate désigne une personne à protéger cette nuit. Ce joueur ne peut pas être emprisonné même si les Infiltrés le choisissent. Elle ne peut pas se protéger deux nuits de suite.',
+   note:'Notez qui elle protège ce tour-ci.'},
+  {id:'interc',  nom:'Intercesseur',       camp:'chr',ordre:7, nuit1:false,recur:true, maxSel:1,altKey:'interc',
+   instr:'L\'Intercesseur désigne un joueur qu\'elle protège par sa prière. Ce joueur ne pourra pas être éliminé par le vote du jour suivant, même s\'il obtient le plus de voix. Elle ne peut pas désigner la même personne deux fois de suite.',
+   note:'Agit en alternance. Annoncez le joueur protégé en début de Phase de Jour. Sa protection est publique.'},
+  {id:'lanceuse',nom:'Lanceuse d\'Alerte', camp:'chr',ordre:8, nuit1:false,recur:true, maxSel:1,altKey:null,
+   instr:'La Lanceuse d\'Alerte désigne un joueur qui ne pourra pas voter lors de la Phase de Jour suivante (mais peut débattre).',
+   note:'Annoncez ce joueur en début de Phase de Jour.'},
+  {id:'juge',    nom:'Juge',                  camp:'chr',ordre:9, nuit1:false,recur:true, maxSel:1,altKey:null,
+   instr:'Le Juge désigne un joueur contre lequel une voix sera automatiquement comptée lors du vote du jour suivant. Personne ne saura d\'où vient cette voix.',
+   note:'Annoncez le vote supplémentaire discrètement lors du décompte, sans en révéler l\'origine.'},
+  {id:'infiltres',nom:'Infiltrés',         camp:'inf',ordre:10, nuit1:false,recur:true, maxSel:1,altKey:null,
+   instr:'Les Infiltrés se réveillent, se reconnaissent et désignent silencieusement leur cible de la nuit.',
+   note:'Vérifiez ensuite si l\'Avocate ou le Ministre protège la cible.'},
+  {id:'propag',  nom:'Propagandiste',      camp:'inf',ordre:11,nuit1:false,recur:false,maxSel:4,altKey:'propag',
+   instr:'Le Propagandiste désigne 4 joueurs parmi les restants. Demain, seuls ces 4 joueurs participent au vote — et sont les seuls à risquer l\'élimination.',
+   note:'Pouvoir unique. Il peut se désigner lui-même.'},
+  {id:'ministre',nom:'Ministre',           camp:'chr',ordre:12,nuit1:false,recur:true, maxSel:0,altKey:null,
+   instr:'Montrez silencieusement au Ministre la cible désignée par les Infiltrés. Il peut utiliser ses pouvoirs (voir ci-dessous).',
+   note:'Deux pouvoirs à usage unique chacun, indépendants.'},
+  {id:'leader',  nom:'Leader Louange',     camp:'chr',ordre:13,nuit1:false,recur:false,maxSel:0,altKey:null,
+   instr:'Le Leader Louange peut chanter un cantique : tout le monde se réveille immédiatement et on passe directement à la Phase de Jour, sans résultat nocturne.',
+   note:'Pouvoir unique. S\'il chante, personne n\'est emprisonné cette nuit.'},
+  {id:'guetteuse',nom:'Guetteuse',         camp:'chr',ordre:14,nuit1:false,recur:true, maxSel:0,altKey:null,
+   instr:'La Guetteuse peut entrouvrir les yeux pour espionner les Infiltrés. Si un Infiltré la repère, il peut l\'éliminer immédiatement.',
+   note:'Elle n\'ouvre pas grand les yeux. Restez attentif à tout mouvement.'},
+];
+const RDIURNES = [
+  {id:'journaliste',nom:'Journaliste',camp:'neu'},
+  {id:'martyr',    nom:'Martyr',      camp:'neu'},
+];
+const ALL_ROLES = [...RDEFS, ...RDIURNES];
+function getRDef(id){return ALL_ROLES.find(r=>r.id===id)||null;}
+function jNom(j){return j.nom+(S.coupleIds.includes(j.id)&&!j.elimine?' 💕':'');}
+function campClass(camp){return camp==='inf'?'inf':camp==='neu'?'neu':camp==='bon'?'bon':'chr';}
+
+// ============================================================
+// STATE
+// ============================================================
+let S = {
+  nbJ:10,
+  noms:{},  // joueurId -> nom saisi
+  hackMode:'role', // 'role' | 'categorie'
+  hackReveal:null, // {nom, affichage, couleurCamp}
+  rolesActifs: new Set(['pasteur','agentd','entrem','prophete','hackeuse','avocate','interc','lanceuse','infiltres','propag','ministre','leader','guetteuse','juge','journaliste','martyr']),
+  joueurs: [],          // {id,nom,elimine,votes,roleId}
+  assignments: {},      // joueurId -> roleId
+  sageId: null,         // joueurId du Sage
+  agentDoubleRole: null,// roleId choisi par agent double
+  coupleIds: [],        // [id1,id2]
+  lanceuseCibleId: null,// cible de la lanceuse (réinitialisé chaque nuit)
+  intercCibleId: null,
+  jugeCibleId: null,
+  propheteVoisins: [],  // [idGauche, idDroite] calculés dynamiquement
+  tour: 1,
+  phase: 'nuit',        // 'nuit'|'bilan'|'jour'|'victoire'
+  stepNuit: 0,
+  nightSels: {},        // stepIndex -> [ids]
+  nightElimId: null,
+  _noElim: false,
+  ministSauv: false,
+  ministElim: false,
+  ministElimCibleId: null,
+  propagUsed: false,
+  leaderUsed: false,
+  martyrFirst: false,
+  pasteurDesigne: false, // true après la 1re désignation nocturne du Pasteur
+  victoryType: null,    // 'croyants'|'infiltres'|'journaliste'|'couple'
+  // Alternance : altMap[key] = 'pair'|'impair'  (quelle nuit le rôle est actif)
+  altMap: {interc:'impair', propag:'pair'},
+};
+
+// ============================================================
+// SETUP UI
+// ============================================================
+function switchTab(n){
+  document.querySelectorAll('.stab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.spanel').forEach((p,i)=>p.classList.toggle('active',i===n));
+  if(n===1) buildAssignGrid();
+  if(n===2) buildAltSection();
+}
+
+function buildRoleGrid(){
+  const g=document.getElementById('roleGrid'); g.innerHTML='';
+  RDEFS.forEach(r=>{
+    const cc=r.camp==='inf'?'inf':r.camp==='bon'?'bon':'';
+    const dc=r.camp==='chr'?'chr':r.camp==='inf'?'inf':r.camp==='bon'?'bon':'neu';
+    const d=document.createElement('div');
+    d.className='rtog'+(S.rolesActifs.has(r.id)?' active '+cc:'');
+    d.dataset.id=r.id;
+    d.dataset.camp=r.camp;
+    d.innerHTML=`<div class="rdot ${dc}"></div><span>${r.nom}</span>`;
+    d.addEventListener('click',()=>{
+      S.rolesActifs.has(r.id)?S.rolesActifs.delete(r.id):S.rolesActifs.add(r.id);
+      d.className='rtog'+(S.rolesActifs.has(r.id)?' active '+cc:'');
+      buildAltSection();
+    });
+    g.appendChild(d);
+  });
+  RDIURNES.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='rtog'+(S.rolesActifs.has(r.id)?' active neu':'');
+    d.dataset.id=r.id;
+    d.dataset.camp='neu';
+    d.innerHTML=`<div class="rdot neu"></div><span>${r.nom} <em style="font-size:.68em;color:var(--gris2)">(sans réveil)</em></span>`;
+    d.addEventListener('click',()=>{
+      S.rolesActifs.has(r.id)?S.rolesActifs.delete(r.id):S.rolesActifs.add(r.id);
+      d.className='rtog'+(S.rolesActifs.has(r.id)?' active neu':'');
+    });
+    g.appendChild(d);
+  });
+}
+
+function onNbChange(){
+  S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
+  updatePreselection();
+  updateRatio();
+}
+function setHackMode(mode){
+  S.hackMode=mode;
+  document.getElementById('hackModeRoleBtn').classList.toggle('active', mode==='role');
+  document.getElementById('hackModeCatBtn').classList.toggle('active', mode==='categorie');
+  document.getElementById('hackModeDesc').textContent=mode==='role'
+    ?'Affiche le rôle exact (ex. "Entremetteuse").'
+    :'Affiche seulement "Infiltré", "Journaliste" ou "Croyant".';
+}
+function updatePreselection(){
+  const n=S.nbJ;
+  // Ordre d'ajout des rôles selon le nombre de joueurs
+  // Les infiltrés de base (2) sont toujours là, gérés par le ratio
+  // Ici on gère les rôles spéciaux et le propagandiste
+  const sequence = [
+    // 7 joueurs de base : hackeuse, avocate, ministre, lanceuse, pasteur (+ 2 infiltrés implicites)
+    {min:7,  id:'hackeuse'},
+    {min:7,  id:'avocate'},
+    {min:7,  id:'ministre'},
+    {min:7,  id:'lanceuse'},
+    {min:7,  id:'pasteur'},
+    {min:7,  id:'infiltres'}, // les infiltrés de base
+    {min:8,  id:'prophete'},
+    {min:9,  id:'journaliste'},
+    {min:10, id:'juge'},
+    {min:11, id:'leader'},
+    {min:12, id:'entrem'},
+    {min:13, id:'agentd'},
+    // 14 : 3e infiltré (géré via ratio, pas un rôle séparé)
+    {min:15, id:'interc'},
+    {min:16, id:'guetteuse'},
+    {min:17, id:'martyr'},
+    // 18 : 4e infiltré (géré via ratio)
+    {min:19, id:'propag'},
+    // 20 : croyant lambda (pas de rôle à cocher)
+  ];
+  S.rolesActifs=new Set();
+  sequence.forEach(r=>{ if(n>=r.min) S.rolesActifs.add(r.id); });
+  // Mettre à jour l'affichage de la grille
+  document.querySelectorAll('.rtog').forEach(el=>{
+    const id=el.dataset.id;
+    if(!id) return;
+    const camp=el.dataset.camp||'';
+    const campCls=camp==='inf'?'inf':camp==='neu'?'neu':'';
+    el.className='rtog'+(S.rolesActifs.has(id)?' active '+campCls:'');
+  });
+}
+function updateRatio(){
+  const n=S.nbJ;
+  const el=document.getElementById('ratioText');
+  if(!el) return;
+  let nbInf=n<=11?2:n<=16?3:4;
+  let nbChr=n-nbInf;
+  el.textContent=`${nbChr} Croyants + ${nbInf} Infiltrés (+ Propagandiste si utilisé)`;
+  const box=document.getElementById('ratioBox');
+  if(box) box.style.borderColor=n<7||n>20?'var(--rouge)':'var(--gris)';
+}
+
+function buildAssignGrid(){
+  S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
+  const g=document.getElementById('assignGrid'); g.innerHTML='';
+  const roleOpts=RDEFS.filter(r=>S.rolesActifs.has(r.id));
+  const diurneOpts=RDIURNES.filter(r=>S.rolesActifs.has(r.id));
+  for(let i=0;i<S.nbJ;i++){
+    const row=document.createElement('div'); row.className='assign-row';
+    const inp=document.createElement('input'); inp.type='text'; inp.className='assign-nom';
+    inp.placeholder=`Joueur ${i+1}`; inp.value=S.noms[i]||'';
+    inp.addEventListener('input',()=>{ S.noms[i]=inp.value.trim()||null; });
+    const sel=document.createElement('select'); sel.className='assign-sel'; sel.dataset.j=i;
+    const baseOpt=document.createElement('option'); baseOpt.value=''; baseOpt.textContent='Croyant (de base)'; sel.appendChild(baseOpt);
+    [...roleOpts,...diurneOpts].forEach(r=>{
+      const o=document.createElement('option'); o.value=r.id; o.textContent=r.nom; sel.appendChild(o);
+    });
+    if(S.assignments[i]) sel.value=S.assignments[i];
+    sel.addEventListener('change',()=>{
+      S.assignments[i]=sel.value||null;
+      const rd=sel.value?getRDef(sel.value):null;
+      const cc=rd?campClass(rd.camp):'';
+      sel.className='assign-sel '+(cc||'');
+    });
+    row.appendChild(inp); row.appendChild(sel); g.appendChild(row);
+  }
+  // Sage select
+  const sageSel=document.getElementById('sageSetupSel');
+  sageSel.innerHTML='<option value="">— Personne —</option>';
+  for(let i=0;i<S.nbJ;i++){
+    const o=document.createElement('option'); o.value=i; o.textContent=`Joueur ${i+1}`;
+    sageSel.appendChild(o);
+  }
+  if(S.sageId!==null) sageSel.value=S.sageId;
+  sageSel.addEventListener('change',()=>{ S.sageId=sageSel.value!==''?parseInt(sageSel.value):null; });
+}
+
+function buildAltSection(){
+  const altRoles=RDEFS.filter(r=>S.rolesActifs.has(r.id)&&r.altKey);
+  const sec=document.getElementById('altSection');
+  const rows=document.getElementById('altRows'); rows.innerHTML='';
+  if(!altRoles.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  altRoles.forEach(r=>{
+    const key=r.altKey;
+    const cur=S.altMap[key]||'impair';
+    const row=document.createElement('div'); row.className='alt-row';
+    row.innerHTML=`<span>${r.nom} actif les nuits :</span>
+    <div class="alt-toggle">
+      <button class="alt-btn${cur==='impair'?' active':''}" onclick="setAlt('${key}','impair',this)">Impaires (1,3,5…)</button>
+      <button class="alt-btn${cur==='pair'?' active':''}" onclick="setAlt('${key}','pair',this)">Paires (2,4,6…)</button>
+    </div>`;
+    rows.appendChild(row);
+  });
+}
+function setAlt(key,val,btn){
+  S.altMap[key]=val;
+  btn.closest('.alt-toggle').querySelectorAll('.alt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+buildRoleGrid();
+buildAltSection();
+updatePreselection();
+updateRatio();
+
+// ============================================================
+// START
+// ============================================================
+function startGame(){
+  S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
+  // Récupérer sage du setup si panneau 1 actif
+  const sageSel=document.getElementById('sageSetupSel');
+  if(sageSel.value!=='') S.sageId=parseInt(sageSel.value);
+  S.joueurs=Array.from({length:S.nbJ},(_,i)=>({id:i,nom:(S.noms[i]&&S.noms[i].trim())||`Joueur ${i+1}`,elimine:false,votes:0,roleId:S.assignments[i]||null}));
+  S.tour=1; S.phase='nuit'; S.stepNuit=0;
+  S.nightSels={}; S.nightElimId=null; S._noElim=false;
+  S.ministSauv=false; S.ministElim=false; S.ministElimCibleId=null; S._hackExtraHTML=''; S.propagUsed=false; S.leaderUsed=false; S.martyrFirst=false; S.pasteurDesigne=false; S.victoryType=null;
+  S.coupleIds=[]; S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null; S.agentDoubleRole=null;
+  document.getElementById('screen-setup').style.display='none';
+  document.getElementById('screen-game').style.display='block';
+  renderPlayers(); renderContent();
+}
+
+// ============================================================
+// JOUEURS
+// ============================================================
+function getAlive(){return S.joueurs.filter(j=>!j.elimine);}
+function getAliveInfiltres(){return S.joueurs.filter(j=>!j.elimine&&(j.roleId==='infiltres'||j.roleId==='propag'));}
+
+function renderPlayers(){
+  const list=document.getElementById('playersList');
+  list.innerHTML='';
+  const alive=getAlive().length;
+  document.getElementById('scAlive').textContent=alive;
+  document.getElementById('scElim').textContent=S.joueurs.filter(j=>j.elimine).length;
+  // Sage indicator
+  const sageJ=S.sageId!==null?S.joueurs[S.sageId]:null;
+  document.getElementById('sageIndicator').textContent='⭐ Sage : '+(sageJ&&!sageJ.elimine?sageJ.nom:'—');
+
+  S.joueurs.forEach(j=>{
+    const div=document.createElement('div');
+    const isCouple=S.coupleIds.includes(j.id)&&!j.elimine;
+    div.className='pcard'+(j.elimine?' elim':'')+(isCouple?' couple-hi':'');
+    const left=document.createElement('div'); left.className='pleft';
+    const nm=document.createElement('div'); nm.className='pname'; nm.textContent=jNom(j)+(j.id===S.sageId&&!j.elimine?' ⭐':'');
+    left.appendChild(nm);
+    // Rôle badge
+    const rid=j.roleId;
+    if(rid){const rd=getRDef(rid);if(rd){const rb=document.createElement('div');rb.className='prole '+campClass(rd.camp);rb.textContent=rd.nom;left.appendChild(rb);}}
+    else{const rb=document.createElement('div');rb.className='prole chr';rb.textContent='Croyant';left.appendChild(rb);}
+    const right=document.createElement('div'); right.className='pright';
+    const vb=document.createElement('div'); vb.className='vbadge'+(j.votes>0?' vis':''); vb.textContent=j.votes;
+    if(!j.elimine){
+      const eb=document.createElement('button'); eb.className='elim-btn'; eb.innerHTML='✕'; eb.title='Éliminer';
+      eb.addEventListener('click',e=>{e.stopPropagation();elimJ(j.id);});
+      right.appendChild(vb); right.appendChild(eb);
+    } else {
+      const rb2=document.createElement('button'); rb2.className='revive-btn'; rb2.innerHTML='↩'; rb2.title='Réintégrer';
+      rb2.addEventListener('click',e=>{e.stopPropagation();reviveJ(j.id);});
+      right.appendChild(rb2);
+    }
+    div.appendChild(left); div.appendChild(right); list.appendChild(div);
+  });
+}
+
+function elimJ(id){
+  S.joueurs[id].elimine=true; S.joueurs[id].votes=0;
+  // Vérifier couple
+  if(S.coupleIds.includes(id)){
+    const partner=S.coupleIds.find(c=>c!==id);
+    if(partner!=null&&!S.joueurs[partner].elimine){
+      setTimeout(()=>{
+        alert(`💔 ${S.joueurs[id].nom} est éliminé·e — son partenaire ${S.joueurs[partner].nom} est également éliminé·e !`);
+        elimJ(partner);
+      },200);
+    }
+  }
+  renderPlayers(); checkVictory();
+}
+function reviveJ(id){S.joueurs[id].elimine=false; renderPlayers();}
+
+// ============================================================
+// SAGE MODAL
+// ============================================================
+function openSageModal(){
+  const sel=document.getElementById('sageSel');
+  sel.innerHTML='<option value="">— Personne —</option>';
+  getAlive().forEach(j=>{const o=document.createElement('option');o.value=j.id;o.textContent=jNom(j);sel.appendChild(o);});
+  if(S.sageId!==null) sel.value=S.sageId;
+  document.getElementById('sageModal').classList.remove('hidden');
+}
+function closeSageModal(){document.getElementById('sageModal').classList.add('hidden');}
+function showRevealOverlay(nom, role, camp){
+  const ov=document.getElementById('revealOverlay');
+  ov.className='reveal-overlay '+(camp==='inf'?'inf':camp==='jou'?'jou':'chr');
+  const color=camp==='inf'?'var(--rouge2)':camp==='jou'?'var(--or)':'var(--violet3)';
+  document.getElementById('revealNom').style.color=color;
+  document.getElementById('revealNom').textContent=nom;
+  document.getElementById('revealRole').style.color=color;
+  document.getElementById('revealRole').textContent=role;
+  ov.classList.remove('hidden');
+}
+function revealHack(){
+  if(S.hackReveal) showRevealOverlay(S.hackReveal.nom, S.hackReveal.affichage, S.hackReveal.couleurCamp);
+}
+function openHackReveal(el){
+  const nom=el.getAttribute('data-nom');
+  const aff=el.getAttribute('data-aff');
+  const camp=el.getAttribute('data-camp');
+  showRevealOverlay(nom,aff,camp);
+}
+function updateHackBtn(){
+  const btn=document.getElementById('hackRevealBtn');
+  if(!btn||!S.hackReveal) return;
+  const c=S.hackReveal.couleurCamp;
+  const color=c==='inf'?'var(--rouge2)':c==='jou'?'var(--or)':'var(--violet3)';
+  const bg=c==='inf'?'rgba(139,26,26,.3)':c==='jou'?'rgba(150,120,0,.3)':'rgba(59,16,96,.3)';
+  const border=c==='inf'?'var(--rouge2)':c==='jou'?'var(--or)':'var(--violet3)';
+  btn.style.display='block';
+  btn.style.background=bg;
+  btn.style.border='2px solid '+border;
+  btn.querySelector('.hrb-name').textContent=S.hackReveal.nom+' → '+S.hackReveal.affichage;
+  btn.querySelector('.hrb-name').style.color=color;
+}
+function hideRevealOverlay(){
+  document.getElementById('revealOverlay').classList.add('hidden');
+}
+function confirmSage(){
+  const v=document.getElementById('sageSel').value;
+  S.sageId=v!==''?parseInt(v):null;
+  closeSageModal(); renderPlayers();
+}
+
+// ============================================================
+// SÉQUENCE NUIT
+// ============================================================
+function isRoleActive(r){
+  // Le Pasteur ne se réveille jamais
+  if(r.id==='pasteur') return false;
+  // Pour infiltrés : au moins un infiltré en vie
+  if(r.id==='infiltres') return S.joueurs.some(j=>(j.roleId==='infiltres'||j.roleId==='propag')&&!j.elimine);
+  // Porteur éliminé ou non attribué → skip
+  const porteur=S.joueurs.find(j=>j.roleId===r.id&&!j.elimine);
+  if(!porteur) return false;
+  // Pouvoirs uniques déjà utilisés
+  if(r.id==='leader'&&S.leaderUsed) return false;
+  if(r.id==='propag'&&S.propagUsed) return false;
+  // Alternance
+  if(r.altKey){
+    const parity=S.tour%2===0?'pair':'impair';
+    if(S.altMap[r.altKey]&&S.altMap[r.altKey]!==parity) return false;
+  }
+  return true;
+}
+
+function getNightSeq(){
+  const isFirst=S.tour===1;
+  return RDEFS
+    .filter(r=>S.rolesActifs.has(r.id))
+    .filter(r=>isFirst?true:!r.nuit1)
+    .filter(r=>!r.nuit1||isFirst)
+    .filter(r=>isRoleActive(r))
+    // Exclure leader et guetteuse de la rotation automatique (ils agissent spontanément)
+    .filter(r=>r.id!=='leader'&&r.id!=='guetteuse')
+    .sort((a,b)=>a.ordre-b.ordre);
+}
+
+// ============================================================
+// VOISINS DU PROPHÈTE
+// ============================================================
+function getPropheteVoisins(){
+  const propheteur=S.joueurs.find(j=>j.roleId==='prophete'&&!j.elimine);
+  if(!propheteur) return [];
+  const alive=getAlive();
+  const idx=alive.findIndex(j=>j.id===propheteur.id);
+  if(idx===-1) return [];
+  const n=alive.length;
+  const gauche=alive[(idx-1+n)%n];
+  const droite=alive[(idx+1)%n];
+  return [gauche,droite];
+}
+
+// ============================================================
+// RENDER CONTENT
+// ============================================================
+function renderContent(){
+  hideHackBar();
+  const area=document.getElementById('contentArea');
+  const dot=document.getElementById('pdot');
+  const lbl=document.getElementById('plbl');
+  const ctr=document.getElementById('tctr');
+
+  if(S.phase==='nuit'){
+    dot.className='pdot nuit'; lbl.textContent='Phase de Nuit'; ctr.textContent=`Tour ${S.tour}`;
+    const seq=getNightSeq();
+    if(S.stepNuit>=seq.length){S.phase='bilan';renderContent();return;}
+    renderNightStep(area,seq);
+  } else if(S.phase==='bilan'){
+    dot.className='pdot fin'; lbl.textContent='Bilan de la nuit'; ctr.textContent=`Tour ${S.tour}`;
+    renderBilan(area);
+  } else if(S.phase==='jour'){
+    dot.className='pdot jour'; lbl.textContent='Phase de Jour'; ctr.textContent=`Tour ${S.tour}`;
+    renderJour(area);
+  } else if(S.phase==='victoire'){
+    dot.className='pdot fin'; lbl.textContent='Fin de partie'; ctr.textContent='';
+    renderVictoire(area);
+  }
+}
+
+function hideHackBar(){
+  S.hackReveal=null;
+  S._hackExtraHTML='';
+}
+function renderNightStep(area, seq){
+  const role=seq[S.stepNuit];
+  const n=seq.length;
+  const progress=seq.map((_,i)=>`<div class="np${i<S.stepNuit?' done':i===S.stepNuit?' cur':''}"></div>`).join('');
+  const cc=role.camp==='inf'?'inf':role.camp==='bon'?'or':'';
+  const curSel=S.nightSels[S.stepNuit]||[];
+
+  // Infos contextuelles selon le rôle
+  let ctxHTML='';
+  if(role.id==='prophete'){
+    const voisins=getPropheteVoisins();
+    if(voisins.length===2){
+      const infVoisins=voisins.filter(v=>v.roleId==='infiltres');
+      const propheteur=S.joueurs.find(j=>j.roleId==='prophete'&&!j.elimine);
+      let msg='';
+      if(infVoisins.length>0){
+        msg=`<span style="color:var(--rouge2)">⚠️ OUI — un voisin est un Infiltré</span> (faire signe discret)`;
+      } else {
+        msg=`<span style="color:var(--vert2)">✓ Aucun voisin Infiltré</span> (ne rien faire)`;
+      }
+      ctxHTML=`<div class="info-box violet" style="margin-top:12px">
+        <div class="info-box-title">Voisins du Prophète (${propheteur?propheteur.nom:'?'})</div>
+        <p>Gauche : <strong>${jNom(voisins[0])}</strong> — Droite : <strong>${jNom(voisins[1])}</strong></p>
+        <p style="margin-top:6px">${msg}</p>
+      </div>`;
+    }
+  }
+
+  if(role.id==='hackeuse'){
+    // Le placeholder est toujours injecté — le bouton sera affiché/caché depuis toggleNSel
+    const revealHTML=`<div id="hackRevealPlaceholder"></div>`;
+    const hackeuse=S.joueurs.find(j=>j.roleId==='hackeuse'&&!j.elimine);
+    const excludeId=hackeuse?hackeuse.id:null;
+    ctxHTML=renderNightSelectorExclude(role,curSel,'','',revealHTML,excludeId);
+  }
+
+  if(role.id==='infiltres'){
+    const nbInf=getAliveInfiltres().length;
+    const avocateStep=getNightSeq().findIndex(r=>r.id==='avocate');
+    const avocateSel=avocateStep!==-1?(S.nightSels[avocateStep]||[]):[];
+    const protege=avocateSel.length?S.joueurs[avocateSel[0]]:null;
+    const protegeBox=protege?`<div class="info-box vert" style="margin-bottom:12px">
+      <div class="info-box-title">Protégé par l'Avocate cette nuit</div>
+      <p><strong>${jNom(protege)}</strong> ne peut pas être emprisonné.</p>
+    </div>`:'';
+    const leaderJ=S.rolesActifs.has('leader')?S.joueurs.find(j=>j.roleId==='leader'&&!j.elimine):null;
+    const leaderBtn=leaderJ?`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gris)">
+      <div style="font-size:.62rem;letter-spacing:.15em;color:var(--gris2);text-transform:uppercase;margin-bottom:8px;">Interruption possible</div>
+      <button onclick="leaderChante()" style="width:100%;padding:14px;border-radius:8px;border:1px solid var(--or);background:rgba(200,150,12,.1);color:var(--or2);font-family:Georgia,serif;font-size:.88rem;cursor:pointer;-webkit-appearance:none;">🎵 Le Leader Louange se lève et chante</button>
+    </div>`:'';
+    ctxHTML=protegeBox+`<div class="info-box rouge" style="margin-bottom:12px">
+      <div class="info-box-title">Infiltrés en vie</div>
+      <p>Il reste <strong>${nbInf}</strong> Infiltré${nbInf>1?'s':''} en jeu : ${getAliveInfiltres().map(j=>jNom(j)).join(', ')||'—'}</p>
+    </div>`+renderNightSelector(role,curSel,'inf')+leaderBtn;
+  }
+
+  if(role.id==='ministre'){
+    const infStep=getNightSeq().findIndex(r=>r.id==='infiltres');
+    const infCible=infStep!==-1?(S.nightSels[infStep]||[]):[];
+    const cibleJ=infCible.length?S.joueurs[infCible[0]]:null;
+    const cibleNom=cibleJ?cibleJ.nom:'inconnue';
+
+    // Sélecteur d'arrestation : visible jusqu'à ce qu'une cible soit choisie
+    const alive=getAlive();
+    const arrestSelectorHTML=S.ministElim?(
+      S.ministElimCibleId!==null
+        ?`<div class="info-box rouge" style="margin-top:12px"><div class="info-box-title">Arrestation confirmée</div><p><strong>${S.joueurs[S.ministElimCibleId]?.nom}</strong> sera emprisonné·e cette nuit.</p></div>`
+        :`<div style="margin-top:14px"><div class="nsel-label">Qui le Ministre fait-il arrêter ?</div><div class="nsel-grid">${alive.map(j=>`<button class="nsel-btn" onclick="setMinistElimCible(${j.id})">${j.nom}</button>`).join('')}</div><div class="nsel-summary">Aucune sélection.</div></div>`
+    ):'';
+
+    ctxHTML=`<div class="info-box rouge" style="margin-bottom:12px">
+      <div class="info-box-title">Cible des Infiltrés cette nuit</div>
+      <p><strong>${cibleNom}</strong></p>
+    </div>
+    <div class="ministre-btns">
+      <button class="minist-btn${S.ministSauv?' used':''}" onclick="useMinistSauv()">
+        ${S.ministSauv?'✓ Protection utilisée':'🛡 Protéger la cible (1x)'}
+      </button>
+      <button class="minist-btn${S.ministElim?' used':''}" onclick="useMinistElim()">
+        ${S.ministElim?'✓ Arrestation en cours…':'⚖️ Emprisonner un suspect (1x)'}
+      </button>
+    </div>
+    ${arrestSelectorHTML}`;
+  }
+
+  if(role.id==='propag'){
+    ctxHTML=renderNightSelector(role,curSel,'inf','Désigner 4 joueurs (seuls votants demain)');
+  }
+
+  if(role.id==='avocate'||role.id==='lanceuse'||role.id==='interc'){
+    ctxHTML=renderNightSelector(role,curSel,'');
+  }
+
+  if(role.id==='agentd'){
+    // Seules les cartes non distribuées (non attribuées à un joueur)
+    const assignedRoles=new Set(Object.values(S.assignments).filter(Boolean));
+    const rolesDispos=RDEFS.filter(r=>S.rolesActifs.has(r.id)&&r.id!=='agentd'&&!assignedRoles.has(r.id));
+    const note=rolesDispos.length===0
+      ?'<p style="color:var(--gris2);font-size:.78rem;margin-top:6px">Aucun rôle non distribué trouvé. Vérifiez l\'attribution dans le setup.</p>'
+      :'';
+    ctxHTML=`<div class="info-box or" style="margin-top:12px">
+      <div class="info-box-title">Rôle choisi par l'Agent Double</div>
+      <p style="font-size:.75rem;color:var(--creme2);margin-bottom:8px;">Montrez deux de ces cartes à l'Agent Double.</p>
+      <select class="assign-sel bon" id="agentDoubleRoleSel" onchange="S.agentDoubleRole=this.value;if(S.agentDoubleRole){S.joueurs.find(j=>j.roleId==='agentd').roleId=S.agentDoubleRole;renderPlayers();}">
+        <option value="">— En attente du choix —</option>
+        ${rolesDispos.map(r=>`<option value="${r.id}"${S.agentDoubleRole===r.id?' selected':''}>${r.nom}</option>`).join('')}
+      </select>
+      ${note}
+    </div>`;
+  }
+
+  if(role.id==='entrem'){
+    ctxHTML=renderNightSelector(role,curSel,'vert','Désigner les deux amoureux');
+    // Stocker le couple dès sélection faite
+  }
+
+  if(!ctxHTML&&role.maxSel>0){
+    ctxHTML=renderNightSelector(role,curSel,'');
+  }
+
+  area.innerHTML=`<div class="pc">
+    <div class="eyebrow">Étape ${S.stepNuit+1}/${n} — Phase de Nuit · Tour ${S.tour}</div>
+    <div class="ptitle">La communauté dort…</div>
+    <div class="pdesc">Tous les yeux sont fermés.</div>
+    <div class="night-prog">${progress}</div>
+    <div class="rspot ${cc}">
+      <div class="rstep">Rôle ${S.stepNuit+1} sur ${n}</div>
+      <div class="rname">${role.nom}${(() => {
+        if(role.id==='infiltres') return '';
+        const p=S.joueurs.find(j=>j.roleId===role.id&&!j.elimine);
+        return p ? '<span style="font-size:.9rem;font-weight:400;opacity:.6;margin-left:10px">— '+p.nom+'</span>' : '';
+      })()}</div>
+      <div class="rinstr">${role.instr}</div>
+      ${role.note?`<div class="rnote">💡 ${role.note}</div>`:''}
+      ${ctxHTML}
+    </div>
+    ${S._hackExtraHTML||''}
+    ${buildNightLog(S.stepNuit)}
+  </div>`;
+  // Hackeuse : créer le bouton reveal dans le placeholder (toujours présent)
+  if(role.id==='hackeuse'){
+    const placeholder=document.getElementById('hackRevealPlaceholder');
+    if(placeholder){
+      const btn=document.createElement('button');
+      btn.id='hackOpenBtn';
+      btn.setAttribute('onclick','openHackReveal(this)');
+      btn.style.cssText='display:none;width:100%;padding:22px 16px;border-radius:10px;text-align:center;cursor:pointer;border:2px solid #9B6FD0;background:rgba(59,16,96,.3);margin-top:16px;-webkit-appearance:none;';
+      btn.innerHTML=`<div class="hob-name" style="font-family:Georgia,serif;font-size:1.4rem;font-weight:700;color:#9B6FD0;margin-bottom:8px;"></div>
+        <div class="hob-sub" style="font-size:.65rem;letter-spacing:.18em;color:#9B6FD0;text-transform:uppercase;opacity:.7;">▶ Appuyer pour révéler en plein écran</div>`;
+      placeholder.appendChild(btn);
+      // Restaurer l'état si un joueur était déjà sélectionné (ex : retour arrière)
+      if(S.hackReveal){
+        const c=S.hackReveal.couleurCamp;
+        const color=c==='inf'?'#C43030':c==='jou'?'#C8960C':'#9B6FD0';
+        btn.style.display='block';
+        btn.style.borderColor=color;
+        btn.setAttribute('data-nom',S.hackReveal.nom);
+        btn.setAttribute('data-aff',S.hackReveal.affichage);
+        btn.setAttribute('data-camp',c);
+        btn.querySelector('.hob-name').textContent=S.hackReveal.nom;
+        btn.querySelector('.hob-name').style.color=color;
+        btn.querySelector('.hob-sub').style.color=color;
+      }
+    }
+  }
+}
+
+function renderNightSelector(role,curSel,colorClass,labelOverride,extraHTML){
+  return renderNightSelectorExclude(role,curSel,colorClass,labelOverride,extraHTML,null);
+}
+function renderNightSelectorExclude(role,curSel,colorClass,labelOverride,extraHTML,excludeId){
+  const alive=getAlive().filter(j=>j.id!==excludeId);
+  const label=labelOverride||(role.maxSel===1?'Joueur désigné':role.maxSel===2?'Deux joueurs désignés':`${role.maxSel} joueurs désignés`);
+  const btns=alive.map(j=>{
+    const isSel=curSel.includes(j.id);
+    return `<button class="nsel-btn${isSel?' sel '+(colorClass||''):''}" onclick="toggleNSel(${S.stepNuit},${j.id},${role.maxSel},'${colorClass||''}')">${jNom(j)}</button>`;
+  }).join('');
+  const selNames=curSel.map(id=>S.joueurs[id]?jNom(S.joueurs[id]):'?').join(', ');
+  return `<div style="margin-top:12px">
+    <div class="nsel-label">${label}</div>
+    <div class="nsel-grid">${btns}</div>
+    <div class="nsel-summary" id="nselSum${S.stepNuit}">${selNames?`<strong>${selNames}</strong>`:'Aucune sélection.'}</div>
+    ${extraHTML||''}
+  </div>`;
+}
+
+function toggleNSel(stepIdx,jid,maxSel,colorClass){
+  if(!S.nightSels[stepIdx]) S.nightSels[stepIdx]=[];
+  const sel=S.nightSels[stepIdx];
+  const pos=sel.indexOf(jid);
+  if(pos!==-1) sel.splice(pos,1);
+  else if(maxSel===1) S.nightSels[stepIdx]=[jid];
+  else if(sel.length<maxSel) sel.push(jid);
+  else { S.nightSels[stepIdx]=[...sel.slice(1),jid]; }
+
+  // Mettre à jour les boutons sans re-render complet
+  const seq=getNightSeq();
+  const role=seq[stepIdx];
+  document.querySelectorAll('.nsel-btn').forEach(btn=>{
+    const bid=parseInt(btn.getAttribute('onclick').match(/toggleNSel\(\d+,(\d+)/)[1]);
+    const isSel=S.nightSels[stepIdx].includes(bid);
+    btn.className='nsel-btn'+(isSel?' sel '+(colorClass||''):'');
+  });
+  const sumEl=document.getElementById(`nselSum${stepIdx}`);
+  const selNames=S.nightSels[stepIdx].map(id=>S.joueurs[id]?.nom||'?').join(', ');
+  if(sumEl) sumEl.innerHTML=selNames?`<strong>${selNames}</strong>`:'Aucune sélection.';
+
+  // Stocker couple si entremetteuse
+  if(role&&role.id==='entrem'&&S.nightSels[stepIdx].length===2){
+    S.coupleIds=S.nightSels[stepIdx].slice();
+  }
+  // Stocker cibles lanceuse/interc
+  if(role&&role.id==='lanceuse') S.lanceuseCibleId=S.nightSels[stepIdx][0]??null;
+  if(role&&role.id==='interc') S.intercCibleId=S.nightSels[stepIdx][0]??null;
+  if(role&&role.id==='juge') S.jugeCibleId=S.nightSels[stepIdx][0]??null;
+
+  // Hackeuse : révéler rôle
+  if(role&&role.id==='hackeuse'){
+    const hkSel=S.nightSels[stepIdx];
+    if(hkSel.length===1){
+      const j=S.joueurs[hkSel[0]];
+      const rid=j.roleId; const rd=rid?getRDef(rid):null;
+      let affichage,couleurCamp;
+      if(S.hackMode==='categorie'){
+        const isInfCat=rd&&rd.camp==='inf';
+        if(isInfCat||rid==='propag'){affichage='Infiltré';couleurCamp='inf';}
+        else if(rid==='journaliste'){affichage='Journaliste';couleurCamp='jou';}
+        else{affichage='Croyant';couleurCamp='chr';}
+      } else {
+        const isInfDisp=rd&&(rd.camp==='inf'||rid==='propag');
+        affichage=rd?rd.nom:'Croyant';
+        couleurCamp=isInfDisp?'inf':rid==='journaliste'?'jou':'chr';
+      }
+      S.hackReveal={nom:j.nom,affichage,couleurCamp};
+      const hackBtn=document.getElementById('hackOpenBtn');
+      if(hackBtn){
+        const c=couleurCamp;
+        const color=c==='inf'?'#C43030':c==='jou'?'#C8960C':'#9B6FD0';
+        hackBtn.style.display='block';
+        hackBtn.style.borderColor=color;
+        hackBtn.setAttribute('data-nom',j.nom);
+        hackBtn.setAttribute('data-aff',affichage);
+        hackBtn.setAttribute('data-camp',c);
+        hackBtn.querySelector('.hob-name').textContent=j.nom;
+        hackBtn.querySelector('.hob-name').style.color=color;
+        hackBtn.querySelector('.hob-sub').style.color=color;
+      }
+    } else {
+      S.hackReveal=null;
+      const hackBtn=document.getElementById('hackOpenBtn');
+      if(hackBtn) hackBtn.style.display='none';
+    }
+  }
+}
+
+function useMinistSauv(){
+  if(!S.ministSauv){
+    S.ministSauv=true;
+    // Annuler la cible nocturne des infiltrés → plus personne d'emprisonné par défaut
+    S.nightElimId=null; S._noElim=true;
+    renderContent();
+  }
+}
+function useMinistElim(){if(!S.ministElim){S.ministElim=true;renderContent();}}
+function setMinistElimCible(id){
+  S.ministElimCibleId=id;
+  S.nightElimId=id; S._noElim=false;
+  renderContent();
+}
+
+function buildNightLog(upToStep){
+  const seq=getNightSeq();
+  const entries=[];
+  for(let i=0;i<upToStep;i++){
+    const r=seq[i]; if(!r) continue;
+    const sel=(S.nightSels[i]||[]).map(id=>S.joueurs[id]?jNom(S.joueurs[id]):'?');
+    if(!sel.length) continue;
+    entries.push(`<div class="nl-item${r.camp==='inf'?' inf':''}"><span class="nl-role">${r.nom}</span><span>${sel.join(', ')}</span></div>`);
+  }
+  if(!entries.length) return '';
+  return `<div class="night-log"><div class="nl-title">Désignations cette nuit</div>${entries.join('')}</div>`;
+}
+
+// ============================================================
+// BILAN NUIT
+// ============================================================
+function renderBilan(area){
+  const seq=getNightSeq();
+  const logItems=seq.map((r,i)=>{
+    const sel=(S.nightSels[i]||[]).map(id=>S.joueurs[id]?jNom(S.joueurs[id]):'?');
+    return `<div class="nl-item${r.camp==='inf'?' inf':''}"><span class="nl-role">${r.nom}</span><span>${sel.length?sel.join(', '):'—'}</span></div>`;
+  }).join('');
+
+  // Déterminer la cible par défaut
+  const infStep=seq.findIndex(r=>r.id==='infiltres');
+  const infSel=infStep!==-1?(S.nightSels[infStep]||[]):[];
+  const infCibleId=infSel.length?infSel[0]:null;
+  const avocStep=seq.findIndex(r=>r.id==='avocate');
+  const avocSel=avocStep!==-1?(S.nightSels[avocStep]||[]):[];
+  const protegeId=avocSel.length?avocSel[0]:null;
+  const ministSauve=S.ministSauv; // ministre a sauvé la cible
+
+  // Vérifier si la cible est le Pasteur (règle des 2 désignations)
+  const pasteurJ=S.joueurs.find(j=>j.roleId==='pasteur'&&!j.elimine);
+  const cibleEstPasteur=pasteurJ!=null&&infCibleId===pasteurJ.id;
+  const pasteurPremiereCible=cibleEstPasteur&&!S.pasteurDesigne;
+
+  // Pré-sélectionner si pas protégé et pas encore choisi manuellement
+  if(S.nightElimId===null&&!S._noElim&&infCibleId!==null){
+    if(infCibleId!==protegeId&&!ministSauve){
+      if(pasteurPremiereCible){
+        S._noElim=true; // 1re désignation du Pasteur : personne emprisonné
+      } else {
+        S.nightElimId=infCibleId;
+      }
+    } else {
+      S._noElim=true; // protégé : personne par défaut
+    }
+  }
+
+  const protegeNote=protegeId?`<div class="info-box vert" style="margin-bottom:10px"><div class="info-box-title">Protégé par l'Avocate</div><p><strong>${S.joueurs[protegeId]?.nom}</strong> est protégé·e cette nuit.</p></div>`:'';
+  const ministNote=ministSauve&&infCibleId!==null?`<div class="info-box violet" style="margin-bottom:10px"><div class="info-box-title">Ministre : protection activée</div><p><strong>${S.joueurs[infCibleId]?.nom}</strong> a été sauvé·e par le Ministre.</p></div>`:'';
+  const pasteurNote=pasteurPremiereCible?`<div class="info-box or" style="margin-bottom:10px"><div class="info-box-title">Pasteur : première désignation</div><p><strong>${pasteurJ.nom}</strong> a été désigné une première fois. Il faudra le désigner <strong>une deuxième nuit</strong> pour l'emprisonner. Cette nuit, personne n'est éliminé.</p></div>`:
+    (cibleEstPasteur&&S.pasteurDesigne)?`<div class="info-box rouge" style="margin-bottom:10px"><div class="info-box-title">Pasteur : deuxième désignation</div><p><strong>${pasteurJ.nom}</strong> a déjà été désigné une fois — il peut maintenant être emprisonné.</p></div>`:'';
+
+  // Sélecteur ministre élimination
+  const alive=getAlive();
+  const elimBtns=['<div class="end-pbtn'+(S._noElim&&S.nightElimId===null?' sel':'')+'" onclick="selectElim(-1)">Personne</div>',
+    ...alive.map(j=>`<div class="end-pbtn${S.nightElimId===j.id?' sel':''}" onclick="selectElim(${j.id})">${jNom(j)}</div>`)
+  ].join('');
+
+  // Résumé de l'arrestation du Ministre dans le bilan
+  const ministElimBox=S.ministElim&&S.ministElimCibleId!==null?`<div class="info-box rouge" style="margin-bottom:10px"><div class="info-box-title">Ministre : arrestation</div><p><strong>${S.joueurs[S.ministElimCibleId]?.nom}</strong> a été fait·e arrêter par le Ministre.</p></div>`:'';
+
+  area.innerHTML=`<div class="pc">
+    <div class="eyebrow">Fin de nuit — Tour ${S.tour}</div>
+    <div class="ptitle rouge">Bilan nocturne</div>
+    <div class="pdesc">Récapitulatif des actions. Confirmez l'éliminé avant de passer au jour.</div>
+    <div class="night-log" style="margin-bottom:16px"><div class="nl-title">Désignations de la nuit</div>${logItems||'<div class="nl-item"><span class="nl-role">Aucune action.</span><span></span></div>'}</div>
+    ${protegeNote}${pasteurNote}${ministNote}${ministElimBox}
+    <div class="end-night-box">
+      <div class="end-title">Qui est emprisonné cette nuit ?</div>
+      <div class="end-desc">La sélection est pré-remplie selon les désignations. Modifiez si besoin (protection, ministre…).</div>
+      <div class="end-players" id="endPlayers">${elimBtns}</div>
+      <div class="end-actions">
+        <button class="btn-confirm" onclick="confirmBilan()">Confirmer et passer au jour →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function selectElim(id){
+  if(id===-1){S.nightElimId=null;S._noElim=true;}
+  else{S.nightElimId=id;S._noElim=false;}
+  document.querySelectorAll('.end-pbtn').forEach(el=>{
+    const onclick=el.getAttribute('onclick');
+    const isNone=onclick==='selectElim(-1)';
+    const jidMatch=onclick.match(/selectElim\((\d+)\)/);
+    const jid=jidMatch?parseInt(jidMatch[1]):null;
+    el.classList.toggle('sel',(isNone&&S._noElim)||(jid!==null&&jid===S.nightElimId));
+  });
+}
+
+function confirmBilan(){
+  let elimId=S.nightElimId;
+  const ov=document.getElementById('nightOverlay');
+  document.getElementById('nightTxt').textContent='Le jour se lève…';
+  ov.classList.add('active');
+  setTimeout(()=>{
+    // Règle Pasteur : si les Infiltrés l'ont désigné et c'est la 1re fois, noter sans éliminer
+    const seq=getNightSeq();
+    const infStep=seq.findIndex(r=>r.id==='infiltres');
+    const infSel=infStep!==-1?(S.nightSels[infStep]||[]):[];
+    const pasteurJ=S.joueurs.find(j=>j.roleId==='pasteur'&&!j.elimine);
+    if(pasteurJ&&infSel.includes(pasteurJ.id)&&!S.pasteurDesigne){
+      S.pasteurDesigne=true;
+      if(elimId===pasteurJ.id) elimId=null; // annuler même si le MJ l'avait sélectionné
+    }
+
+    S.phase='jour';
+    S.nightSels={}; S.nightElimId=null; S._noElim=false;
+    if(elimId!==null){
+      S.joueurs[elimId].elimine=true; S.joueurs[elimId].votes=0;
+      if(S.coupleIds.includes(elimId)){
+        const partner=S.coupleIds.find(c=>c!==elimId);
+        if(partner!=null&&!S.joueurs[partner].elimine) S.joueurs[partner].elimine=true;
+      }
+    }
+    renderContent(); renderPlayers(); checkVictory();
+    setTimeout(()=>ov.classList.remove('active'),400);
+  },800);
+}
+
+// ============================================================
+// PHASE JOUR
+// ============================================================
+function renderJour(area){ try {
+  const rappels=[];
+
+  try {
+    // Lanceuse
+    if(S.lanceuseCibleId!=null&&S.lanceuseCibleId>=0){
+      const j=S.joueurs[S.lanceuseCibleId];
+      if(j&&!j.elimine) rappels.push(`<div class="jr-item"><strong>${jNom(j)}</strong> ne peut pas voter (Lanceuse d'Alerte).</div>`);
+    }
+    // Intercesseur : protection de jour
+    if(S.intercCibleId!=null&&S.intercCibleId>=0){
+      const j=S.joueurs[S.intercCibleId];
+      if(j&&!j.elimine) rappels.push(`<div class="jr-item"><strong>${jNom(j)}</strong> est protégé·e par l'Intercesseur — ne peut pas être éliminé·e par le vote aujourd'hui.</div>`);
+    }
+    // Juge : voix automatique
+    if(S.jugeCibleId!=null&&S.jugeCibleId>=0){
+      const j=S.joueurs[S.jugeCibleId];
+      if(j&&!j.elimine) rappels.push(`<div class="jr-item"><strong>${jNom(j)}</strong> a déjà <strong>1 voix</strong> contre lui/elle (Juge).</div>`);
+    }
+  } catch(e){ console.warn('Rappels jour:', e); }
+  // Martyr
+  if(S.rolesActifs.has('martyr')&&!S.martyrFirst){
+    rappels.push(`<div class="jr-item warn">⚠️ Si le Martyr est éliminé lors de ce vote, il gagne seul.</div>`);
+  }
+  // Propagandiste
+  const propSel=S.propagUsed?null:null; // déjà appliqué via bilan
+
+  const rappelHTML=rappels.length?`<div class="jour-rappels"><div class="jr-title">Rappels de début de journée</div>${rappels.join('')}</div>`:'';
+
+  area.innerHTML=`<div class="pc">
+    <div class="eyebrow">Phase de Jour — Tour ${S.tour}</div>
+    <div class="ptitle or">Le jour se lève.</div>
+    <div class="pdesc">Annoncez les événements de la nuit, puis laissez le débat s'engager.</div>
+    ${rappelHTML}
+    <div class="vote-section">
+      <div class="vote-title">Vote d'exclusion</div>
+      <div class="vote-desc">Utilisez + et − pour ajuster les votes de chaque joueur.</div>
+      <div class="vote-leader" id="voteLeader">Aucun vote pour l'instant.</div>
+      <div class="vote-list" id="voteList"></div>
+      <div class="vote-actions">
+        <button class="vbtn reset" onclick="resetVotes()">Réinitialiser</button>
+        <button class="vbtn elim" onclick="elimLeader()">Éliminer le joueur en tête →</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Pré-charger vote du Juge uniquement
+  try {
+    if(S.jugeCibleId!=null&&S.jugeCibleId>=0){
+      const j=S.joueurs[S.jugeCibleId];
+      if(j&&!j.elimine) j.votes=(j.votes||0)+1;
+    }
+  } catch(e){ console.warn('Prevote juge:', e); }
+  renderVoteList();
+  } catch(e){ console.error('renderJour:', e); area.innerHTML='<div style="padding:40px;color:var(--rouge2);font-family:Georgia,serif;"><h2>Erreur d\'affichage</h2><p style="margin-top:12px;color:var(--creme2);font-size:.9rem">'+e.message+'</p><button onclick="S.phase=\'jour\';renderContent();" style="margin-top:20px;padding:10px 20px;border:1px solid var(--violet);border-radius:6px;background:transparent;color:var(--violet3);cursor:pointer;">Réessayer</button></div>'; }
+}
+
+function renderVoteList(){
+  const list=document.getElementById('voteList'); if(!list) return;
+  const alive=getAlive();
+  list.innerHTML='';
+  alive.forEach(j=>{
+    const isJuge=j.id===S.jugeCibleId;
+    const isLanceuse=j.id===S.lanceuseCibleId;
+    const div=document.createElement('div');
+    div.className='vplayer'+(j.votes>0?' hv':'')+(isLanceuse?' pre-vote':'');
+    div.innerHTML=`<span class="vpname">${jNom(j)}${isJuge?' ⚖️':''}</span><span class="vcount">${j.votes||0}</span>`;
+    div.addEventListener('click',()=>{S.joueurs[j.id].votes=(S.joueurs[j.id].votes||0)+1;renderVoteList();updateVoteLeader();renderPlayers();});
+    list.appendChild(div);
+  });
+  updateVoteLeader();
+}
+
+function updateVoteLeader(){
+  const ldr=document.getElementById('voteLeader'); if(!ldr) return;
+  const alive=getAlive().filter(j=>j.votes>0);
+  if(!alive.length){ldr.innerHTML='Aucun vote pour l\'instant.';return;}
+  const max=Math.max(...alive.map(j=>j.votes));
+  const leaders=alive.filter(j=>j.votes===max);
+  ldr.innerHTML=leaders.length===1?`En tête : <strong>${leaders[0].nom}</strong> — ${max} vote${max>1?'s':''}.`:
+    `Égalité : <strong>${leaders.map(j=>j.nom).join(' / ')}</strong> — voix du Sage départage.`;
+}
+
+function resetVotes(){
+  S.joueurs.forEach(j=>j.votes=0);
+  if(S.jugeCibleId!==null){const j=S.joueurs[S.jugeCibleId];if(j&&!j.elimine)j.votes=(j.votes||0)+1;}
+  renderVoteList(); updateVoteLeader(); renderPlayers();
+}
+
+function elimLeader(){
+  const alive=getAlive().filter(j=>j.votes>0);
+  if(!alive.length) return;
+  const max=Math.max(...alive.map(j=>j.votes));
+  let leaders=alive.filter(j=>j.votes===max);
+  // Protection Intercesseur : retirer le protégé des candidats à l'élimination
+  if(S.intercCibleId!==null){
+    const filtered=leaders.filter(j=>j.id!==S.intercCibleId);
+    if(filtered.length<leaders.length){
+      const prot=S.joueurs[S.intercCibleId];
+      alert(`🛡 ${prot.nom} est protégé·e par l'Intercesseur et ne peut pas être éliminé·e aujourd'hui.`);
+      leaders=filtered;
+      if(!leaders.length){resetVotes();return;}
+    }
+  }
+  if(leaders.length===1){
+    const estPremierVote=!S.martyrFirst;
+    S.martyrFirst=true;
+    const martyrJ=S.joueurs.find(j=>j.roleId==='martyr'&&!j.elimine);
+    if(estPremierVote&&martyrJ&&leaders[0].id===martyrJ.id){
+      // Le Martyr est éliminé en premier — il gagne seul
+      elimJ(martyrJ.id);
+      S.victoryType='martyr'; S.phase='victoire';
+      renderContent(); return;
+    }
+    elimJ(leaders[0].id); resetVotes();
+  } else { alert('Égalité ! La voix du Sage départage. Résolvez manuellement puis ✕ pour éliminer.'); }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function nextStep(){
+  if(S.phase==='nuit'){
+    const seq=getNightSeq();
+    S.stepNuit++;
+    if(S.stepNuit>=seq.length){ S.phase='bilan'; }
+    renderContent();
+  } else if(S.phase==='bilan'){
+    // confirmBilan() est appelé par le bouton dans le bilan
+  } else if(S.phase==='jour'){
+    const ov=document.getElementById('nightOverlay');
+    document.getElementById('nightTxt').textContent='La nuit tombe…';
+    ov.classList.add('active');
+    // Reset votes et cibles
+    S.joueurs.forEach(j=>j.votes=0);
+    S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null;
+    setTimeout(()=>{
+      S.tour++; S.phase='nuit'; S.stepNuit=0;
+      S.nightSels={}; S.nightElimId=null; S._noElim=false;
+      renderContent(); renderPlayers();
+      setTimeout(()=>ov.classList.remove('active'),400);
+    },800);
+  }
+}
+
+function prevStep(){
+  if(S.phase==='nuit'&&S.stepNuit>0){ S.stepNuit--; renderContent(); }
+  else if(S.phase==='bilan'){ S.phase='nuit'; const seq=getNightSeq(); S.stepNuit=seq.length-1; renderContent(); }
+  else if(S.phase==='jour'){ S.phase='bilan'; renderContent(); }
+}
+
+// ============================================================
+// LEADER LOUANGE — interruption nocturne
+// ============================================================
+function leaderChante(){
+  const leaderJ=S.joueurs.find(j=>j.roleId==='leader'&&!j.elimine);
+  if(!leaderJ) return;
+  const ov=document.getElementById('nightOverlay');
+  document.getElementById('nightTxt').textContent='🎵 Le Leader Louange chante… Tout le monde se réveille !';
+  ov.classList.add('active');
+  setTimeout(()=>{
+    // Le Leader se sacrifie
+    S.joueurs[leaderJ.id].elimine=true; S.joueurs[leaderJ.id].votes=0;
+    S.leaderUsed=true;
+    // Passer directement au jour, sans bilan ni élimination nocturne
+    S.phase='jour';
+    S.nightSels={}; S.nightElimId=null; S._noElim=true;
+    S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null;
+    renderContent(); renderPlayers(); checkVictory();
+    setTimeout(()=>ov.classList.remove('active'),400);
+  },1200);
+}
+
+// ============================================================
+// VICTOIRE
+// ============================================================
+function checkVictory(){
+  const alive=getAlive();
+  const nbInf=alive.filter(j=>j.roleId==='infiltres'||j.roleId==='propag').length;
+  const journalisteJ=alive.find(j=>j.roleId==='journaliste');
+  const nbChr=alive.filter(j=>j.roleId!=='infiltres'&&j.roleId!=='propag'&&j.roleId!=='journaliste').length;
+  const nbNonInf=alive.filter(j=>j.roleId!=='infiltres'&&j.roleId!=='propag').length;
+
+  // Journaliste : gagne seul s'il est le dernier non-infiltré (même avec infiltrés en vie)
+  if(journalisteJ&&nbChr===0){
+    S.victoryType='journaliste'; S.phase='victoire'; renderContent(); return;
+  }
+  // Plus d'infiltrés
+  if(nbInf===0){
+    // Amoureux seuls (les 2 seuls survivants, sans infiltrés)
+    if(S.coupleIds.length===2){
+      const c0=S.joueurs[S.coupleIds[0]], c1=S.joueurs[S.coupleIds[1]];
+      if(c0&&c1&&!c0.elimine&&!c1.elimine&&alive.length===2){
+        S.victoryType='couple'; S.phase='victoire'; renderContent(); return;
+      }
+    }
+    S.victoryType='croyants'; S.phase='victoire'; renderContent(); return;
+  }
+  // Infiltrés >= non-infiltrés → infiltrés ont la majorité
+  if(nbInf>=nbNonInf){
+    S.victoryType='infiltres'; S.phase='victoire'; renderContent(); return;
+  }
+}
+
+function renderVictoire(area){
+  const alive=getAlive();
+  const vt=S.victoryType||'croyants';
+  const configs={
+    croyants:{icon:'✝️',color:'var(--violet3)',title:'Les Croyants ont gagné !',desc:'Tous les Infiltrés ont été éliminés. La communauté est sauvée.'},
+    infiltres:{icon:'🕵️',color:'var(--rouge2)',title:'Les Infiltrés ont gagné !',desc:'Les Infiltrés ont pris le contrôle de la communauté.'},
+    journaliste:{icon:'📰',color:'var(--or)',title:'Le Journaliste a gagné !',desc:'Seul survivant parmi les non-Infiltrés, le Journaliste remporte la partie.'},
+    couple:{icon:'💕',color:'var(--vert2)',title:'Les Amoureux ont gagné !',desc:'Seuls rescapés sans Infiltré, les deux amoureux remportent la partie ensemble.'},
+    martyr:{icon:'🕊️',color:'var(--or2)',title:'Le Martyr a gagné !',desc:'Éliminé en premier lors du vote, le Martyr accomplit son destin et remporte la partie seul.'},
+  };
+  const cfg=configs[vt]||configs.croyants;
+  area.innerHTML=`<div class="victory">
+    <div class="v-icon">${cfg.icon}</div>
+    <div class="v-title" style="color:${cfg.color}">${cfg.title}</div>
+    <div class="v-desc">
+      ${cfg.desc}<br><br>
+      ${alive.length?`Survivants : <strong>${alive.map(j=>j.nom).join(', ')}</strong>`:'Plus aucun survivant.'}<br>
+      <em style="font-size:.8rem;color:var(--gris2)">Partie terminée au tour ${S.tour}.</em>
+    </div>
+    <button class="btn-restart" onclick="location.reload()">Nouvelle partie</button>
+  </div>`;
+}
+</script>
+</body>
+</html>
