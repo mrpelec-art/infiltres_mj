@@ -504,6 +504,7 @@ let S = {
   assignments: {},      // joueurId -> roleId
   sageId: null,         // joueurId du Sage
   agentDoubleRole: null,// roleId choisi par agent double
+  agentdPorteurId: null,// joueurId identifié comme Agent Double (indépendant de son roleId, qui change ensuite)
   nonDistribuees: new Set(),// roleId des cartes confirmées non distribuées à un joueur (Nuit 1 Découverte)
   nameEditorOpen: false,// panneau de renommage des joueurs ouvert (Nuit 1 Découverte)
   coupleIds: [],        // [id1,id2]
@@ -799,6 +800,8 @@ function startGame(){
   S.ministSauv=false; S.ministElim=false; S.ministElimCibleId=null; S._hackExtraHTML=''; S.propagUsed=false; S.leaderUsed=false; S.martyrFirst=false; S.pasteurDesigne=false; S.victoryType=null;
   S.coupleIds=[]; S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null; S.agentDoubleRole=null;
   S.nonDistribuees=new Set(); S.nameEditorOpen=false;
+  const agentdJ=S.joueurs.find(j=>j.roleId==='agentd');
+  S.agentdPorteurId=agentdJ?agentdJ.id:null;
   document.getElementById('screen-setup').style.display='none';
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
@@ -978,14 +981,22 @@ function decouverteTakenPlayers(roleId){
   return taken;
 }
 
+// Joueurs identifiés comme porteurs de roleId, pour les besoins de l'attribution.
+// Cas particulier de l'Agent Double : une fois son rôle final choisi, son roleId
+// change (il devient réellement ce personnage) — on garde donc la trace de son
+// identité d'origine séparément, sinon l'attribution semblerait annulée.
+function roleHolderIds(roleId){
+  if(roleId==='agentd') return S.agentdPorteurId!=null?[S.agentdPorteurId]:[];
+  return S.joueurs.filter(j=>j.roleId===roleId).map(j=>j.id);
+}
+
 // Un rôle est considéré réglé une fois sa capacité atteinte, ou une fois confirmé
 // comme non distribué (carte restée dans le talon — voir Agent Double).
 function stepAttributionOk(role){
   if(!role) return true;
   if(S.nonDistribuees.has(role.id)) return true;
   const cap=roleCapacity(role.id);
-  const count=S.joueurs.filter(j=>j.roleId===role.id).length;
-  return count>=cap;
+  return roleHolderIds(role.id).length>=cap;
 }
 
 function toggleNonDistribuee(roleId){
@@ -1019,12 +1030,13 @@ function renderNameEditorToggle(){
 
 function renderAttribBlock(role){
   const cap=roleCapacity(role.id);
-  const current=S.joueurs.filter(j=>j.roleId===role.id);
+  const holderIds=roleHolderIds(role.id);
+  const current=holderIds.map(id=>S.joueurs[id]);
   const taken=decouverteTakenPlayers(role.id);
   const nonDistribuee=S.nonDistribuees.has(role.id);
   const colorClass=role.id==='infiltres'?' inf':'';
   const btns=S.joueurs.map(j=>{
-    const isSel=j.roleId===role.id;
+    const isSel=holderIds.includes(j.id);
     const disabled=!isSel&&(taken.has(j.id)||current.length>=cap);
     return `<button class="nsel-btn${isSel?' sel'+colorClass:''}"${disabled?' disabled':''} onclick="toggleAttrib('${role.id}',${j.id})">${jNom(j)}</button>`;
   }).join('');
@@ -1046,7 +1058,12 @@ function renderAttribBlock(role){
 function toggleAttrib(roleId,playerId){
   const j=S.joueurs[playerId];
   if(j.roleId===roleId){
+    // Ne concerne que le cas où le joueur porte encore littéralement ce rôle :
+    // une fois l'Agent Double transformé, son roleId a changé et ce bouton
+    // (toujours affiché comme sélectionné via agentdPorteurId) devient inerte —
+    // on ne veut pas effacer son nouveau rôle par erreur.
     j.roleId=null; delete S.assignments[playerId];
+    if(roleId==='agentd') S.agentdPorteurId=null;
   } else {
     if(j.roleId) return; // déjà porteur d'un autre rôle
     const cap=roleCapacity(roleId);
@@ -1059,6 +1076,7 @@ function toggleAttrib(roleId,playerId){
     }
     j.roleId=roleId; S.assignments[playerId]=roleId;
     S.nonDistribuees.delete(roleId); // manifestement distribuée après tout
+    if(roleId==='agentd') S.agentdPorteurId=playerId;
   }
   renderContent(); renderPlayers();
 }
@@ -1284,8 +1302,9 @@ function renderNightStep(area, seq){
       <div class="rstep">Rôle ${S.stepNuit+1} sur ${n}</div>
       <div class="rname">${role.nom}${(() => {
         if(role.id==='infiltres'||role.id==='colocataire') return '';
-        const p=S.joueurs.find(j=>j.roleId===role.id&&!j.elimine);
-        return p ? '<span style="font-size:.9rem;font-weight:400;opacity:.6;margin-left:10px">— '+p.nom+'</span>' : '';
+        const holderId=roleHolderIds(role.id)[0];
+        const p=holderId!=null?S.joueurs[holderId]:null;
+        return (p&&!p.elimine) ? '<span style="font-size:.9rem;font-weight:400;opacity:.6;margin-left:10px">— '+p.nom+'</span>' : '';
       })()}</div>
       <div class="rinstr">${role.instr}</div>
       ${role.note?`<div class="rnote">💡 ${role.note}</div>`:''}
@@ -1766,11 +1785,13 @@ function prevStep(){
 function nouvellePartie(){ location.reload(); }
 
 function setAgentDoubleRole(val){
-  const ad=S.joueurs.find(j=>j.roleId==='agentd'&&!j.elimine);
-  if(!ad) return;
+  const ad=S.agentdPorteurId!=null?S.joueurs[S.agentdPorteurId]:null;
+  if(!ad||ad.elimine) return;
   if(val==='__croyant__'){ ad.roleId=null; S.agentDoubleRole=null; }
   else if(val){ ad.roleId=val; S.agentDoubleRole=val; }
-  renderPlayers();
+  // Différé : cet appel vient d'un onchange sur un <select> qui va lui-même être
+  // remplacé par ce re-rendu (même précaution que pour renamePlayer()).
+  setTimeout(()=>{ renderContent(); renderPlayers(); },0);
 }
 
 function leaderChante(){
