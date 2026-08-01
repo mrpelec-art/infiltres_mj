@@ -29,7 +29,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ===== SETUP ===== */
-#screen-setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:32px 16px;background:radial-gradient(ellipse at 50% 25%,#2A1050 0%,var(--noir) 70%);}
+#screen-setup{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:calc(32px + env(safe-area-inset-top)) 16px 32px;background:radial-gradient(ellipse at 50% 25%,#2A1050 0%,var(--noir) 70%);}
 .logo-title{font-family:Georgia,serif;font-size:clamp(2rem,6vw,3.8rem);font-weight:700;letter-spacing:.12em;color:var(--creme);text-align:center;margin-bottom:6px;}
 .logo-sub{font-family:Georgia,serif;font-size:.85rem;letter-spacing:.35em;color:var(--or);text-align:center;text-transform:uppercase;margin-bottom:36px;}
 .setup-card{background:var(--noir2);border:1px solid var(--violet);border-radius:12px;padding:28px;width:100%;max-width:600px;box-shadow:0 0 50px rgba(59,16,96,.4);}
@@ -333,7 +333,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
       <label class="field-label">Rôles présents dans cette partie</label>
       <div class="role-grid" id="roleGrid"></div>
       <button class="btn-sec" onclick="switchTab(1)">Suivant : nommer & attribuer les rôles →</button>
-      <button class="btn-primary" onclick="startGame()">Commencer sans attribution</button>
     </div>
 
     <!-- Panneau 2 : attribution -->
@@ -701,8 +700,26 @@ updateRatio();
 // ============================================================
 // START
 // ============================================================
+function attributionMissing(){
+  const vals=Object.values(S.assignments).filter(Boolean);
+  const nbInfTotal=S.nbJ<=11?2:S.nbJ<=16?3:4;
+  const nbInfAssigned=vals.filter(v=>v==='infiltres').length;
+  const missing=[];
+  if(nbInfAssigned<nbInfTotal) missing.push(`Infiltrés (${nbInfAssigned}/${nbInfTotal})`);
+  [...RDEFS,...RDIURNES].filter(r=>S.rolesActifs.has(r.id)&&r.id!=='infiltres').forEach(r=>{
+    if(!vals.includes(r.id)) missing.push(r.nom);
+  });
+  return missing;
+}
+
 function startGame(){
   S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
+  const missing=attributionMissing();
+  if(missing.length){
+    switchTab(1);
+    alert('Attribution incomplète — il manque : '+missing.join(', '));
+    return;
+  }
   // Récupérer sage du setup si panneau 1 actif
   const sageSel=document.getElementById('sageSetupSel');
   if(sageSel.value!=='') S.sageId=parseInt(sageSel.value);
