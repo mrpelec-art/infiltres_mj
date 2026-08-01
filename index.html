@@ -39,6 +39,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 .spanel{display:none;}.spanel.active{display:block;}
 .field-label{font-size:.72rem;letter-spacing:.1em;color:var(--creme2);text-transform:uppercase;margin-bottom:8px;display:block;}
 .nb-input{width:100%;background:var(--noir3);border:1px solid var(--gris);border-radius:8px;color:var(--creme);font-family:Georgia,serif;font-size:1.8rem;text-align:center;padding:14px;margin-bottom:20px;outline:none;}
+.inf-count-input{width:64px;background:var(--noir2);border:1px solid var(--gris);border-radius:8px;color:var(--or);font-family:Georgia,serif;font-size:1.2rem;text-align:center;padding:8px 4px;outline:none;}
+.inf-count-input:focus{border-color:var(--or);}
 .nb-input:focus{border-color:var(--violet2);}
 
 /* Grille rôles */
@@ -326,9 +328,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
         </div>
         <div style="font-size:.7rem;color:var(--gris2);margin-top:8px;line-height:1.5;" id="hackModeDesc">Affiche le rôle exact (ex. "Entremetteuse").</div>
       </div>
-      <div id="ratioBox" style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+      <div id="ratioBox" style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:.75rem;color:var(--creme2);">Ratio recommandé</div>
         <div id="ratioText" style="font-family:Georgia,serif;font-size:.9rem;color:var(--or);font-weight:600;">—</div>
+      </div>
+      <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:.75rem;color:var(--creme2);">Nombre d'Infiltrés dans cette partie</div>
+          <div style="font-size:.65rem;color:var(--gris2);margin-top:2px;">Vide = ratio idéal ci-dessus</div>
+        </div>
+        <input type="number" class="inf-count-input" id="nbInfInput" min="1" oninput="onNbInfChange()">
       </div>
       <label class="field-label">Rôles présents dans cette partie</label>
       <div class="role-grid" id="roleGrid"></div>
@@ -468,6 +477,7 @@ function campClass(camp){return camp==='inf'?'inf':camp==='neu'?'neu':camp==='bo
 // ============================================================
 let S = {
   nbJ:10,
+  nbInfCustom:null, // nombre d'Infiltrés choisi par le MJ, sinon ratio idéal
   noms:{},  // joueurId -> nom saisi
   hackMode:'role', // 'role' | 'categorie'
   hackReveal:null, // {nom, affichage, couleurCamp}
@@ -598,15 +608,27 @@ function updatePreselection(){
     el.className='rtog'+(S.rolesActifs.has(id)?' active '+campCls:'');
   });
 }
+function nbInfIdeal(n){return n<=11?2:n<=16?3:4;}
+function getNbInfTarget(){
+  return (S.nbInfCustom!=null&&S.nbInfCustom>0)?S.nbInfCustom:nbInfIdeal(S.nbJ);
+}
 function updateRatio(){
   const n=S.nbJ;
   const el=document.getElementById('ratioText');
   if(!el) return;
-  let nbInf=n<=11?2:n<=16?3:4;
-  let nbChr=n-nbInf;
+  const nbInf=nbInfIdeal(n);
+  const nbChr=n-nbInf;
   el.textContent=`${nbChr} Croyants + ${nbInf} Infiltrés (+ Propagandiste si utilisé)`;
   const box=document.getElementById('ratioBox');
   if(box) box.style.borderColor=n<7||n>20?'var(--rouge)':'var(--gris)';
+  const infInput=document.getElementById('nbInfInput');
+  if(infInput) infInput.placeholder=String(nbInf);
+}
+function onNbInfChange(){
+  const v=parseInt(document.getElementById('nbInfInput').value);
+  S.nbInfCustom=(v>0)?v:null;
+  updateRatio();
+  refreshAllAssignSels();
 }
 
 // Rôles qui peuvent être attribués à plusieurs joueurs (pas de limite)
@@ -619,12 +641,17 @@ function fillAssignSel(sel, j){
     if(parseInt(k)!==j&&v&&!ROLES_MULTI.includes(v)) taken.add(v);
   });
   const curVal=S.assignments[j]||'';
+  // Infiltrés : plafonné au nombre choisi (ou ratio idéal) pour cette partie
+  const nbInfTarget=getNbInfTarget();
+  const nbInfAssignedOthers=Object.entries(S.assignments).filter(([k,v])=>parseInt(k)!==j&&v==='infiltres').length;
+  const infiltresAvailable=curVal==='infiltres'||nbInfAssignedOthers<nbInfTarget;
   const roleOpts=RDEFS.filter(r=>S.rolesActifs.has(r.id));
   const diurneOpts=RDIURNES.filter(r=>S.rolesActifs.has(r.id));
   sel.innerHTML='';
   const base=document.createElement('option'); base.value=''; base.textContent='Croyant (de base)'; sel.appendChild(base);
   [...roleOpts,...diurneOpts].forEach(r=>{
-    if(taken.has(r.id)) return; // déjà pris par quelqu'un d'autre
+    if(r.id==='infiltres'){ if(!infiltresAvailable) return; } // quota d'Infiltrés atteint
+    else if(taken.has(r.id)) return; // déjà pris par quelqu'un d'autre
     const o=document.createElement('option'); o.value=r.id;
     o.textContent=r.id==='infiltres'?'Infiltré':r.nom;
     sel.appendChild(o);
@@ -702,7 +729,7 @@ updateRatio();
 // ============================================================
 function attributionMissing(){
   const vals=Object.values(S.assignments).filter(Boolean);
-  const nbInfTotal=S.nbJ<=11?2:S.nbJ<=16?3:4;
+  const nbInfTotal=getNbInfTarget();
   const nbInfAssigned=vals.filter(v=>v==='infiltres').length;
   const missing=[];
   if(nbInfAssigned<nbInfTotal) missing.push(`Infiltrés (${nbInfAssigned}/${nbInfTotal})`);
@@ -1038,7 +1065,7 @@ function renderNightStep(area, seq){
   if(role.id==='agentd'){
     const assignedRoleIds=Object.values(S.assignments).filter(Boolean);
     const hasAssign=assignedRoleIds.length>0;
-    const nbInfTotal=S.nbJ<=11?2:S.nbJ<=16?3:4;
+    const nbInfTotal=getNbInfTarget();
     const opts=[];
 
     if(hasAssign){
