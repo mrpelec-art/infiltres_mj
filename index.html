@@ -504,6 +504,8 @@ let S = {
   assignments: {},      // joueurId -> roleId
   sageId: null,         // joueurId du Sage
   agentDoubleRole: null,// roleId choisi par agent double
+  agentdDeferred: false,// carte Agent Double pas encore distribuée (Nuit 1 Découverte)
+  nameEditorOpen: false,// panneau de renommage des joueurs ouvert (Nuit 1 Découverte)
   coupleIds: [],        // [id1,id2]
   lanceuseCibleId: null,// cible de la lanceuse (réinitialisé chaque nuit)
   intercCibleId: null,
@@ -796,6 +798,7 @@ function startGame(){
   S.nightSels={}; S.nightElimId=null; S._noElim=false;
   S.ministSauv=false; S.ministElim=false; S.ministElimCibleId=null; S._hackExtraHTML=''; S.propagUsed=false; S.leaderUsed=false; S.martyrFirst=false; S.pasteurDesigne=false; S.victoryType=null;
   S.coupleIds=[]; S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null; S.agentDoubleRole=null;
+  S.agentdDeferred=false; S.nameEditorOpen=false;
   document.getElementById('screen-setup').style.display='none';
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
@@ -973,6 +976,43 @@ function decouverteTakenPlayers(roleId){
   const taken=new Set();
   S.joueurs.forEach(j=>{ if(j.roleId&&j.roleId!==roleId) taken.add(j.id); });
   return taken;
+}
+
+// Un rôle est considéré attribué une fois sa capacité atteinte (ou différé pour l'Agent Double)
+function stepAttributionOk(role){
+  if(!role) return true;
+  if(role.id==='agentd'&&S.agentdDeferred) return true;
+  const cap=roleCapacity(role.id);
+  const count=S.joueurs.filter(j=>j.roleId===role.id).length;
+  return count>=cap;
+}
+
+function toggleAgentdDefer(){
+  S.agentdDeferred=!S.agentdDeferred;
+  renderContent();
+}
+
+function toggleNameEditor(){
+  S.nameEditorOpen=!S.nameEditorOpen;
+  renderContent();
+}
+
+function renamePlayer(id,val){
+  const nom=(val||'').trim()||`Joueur ${id+1}`;
+  S.joueurs[id].nom=nom; S.noms[id]=nom;
+  // Différer le re-rendu : appelé depuis un événement "change" (blur), remplacer le DOM
+  // dans le même tick peut faire planter le navigateur sur le nœud en cours de retrait.
+  setTimeout(()=>{ renderContent(); renderPlayers(); },0);
+}
+
+function renderNameEditorToggle(){
+  const grid=S.nameEditorOpen?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;max-height:280px;overflow-y:auto;">
+    ${S.joueurs.map(j=>`<input type="text" class="assign-nom" value="${j.nom.replace(/"/g,'&quot;')}" placeholder="Joueur ${j.id+1}" onchange="renamePlayer(${j.id},this.value)">`).join('')}
+  </div>`:'';
+  return `<div style="margin-bottom:14px;">
+    <button onclick="toggleNameEditor()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gris);background:var(--noir3);color:var(--creme2);font-size:.78rem;cursor:pointer;-webkit-appearance:none;text-align:left;">✏️ ${S.nameEditorOpen?'Masquer les noms':'Modifier les noms des joueurs'}</button>
+    ${grid}
+  </div>`;
 }
 
 function renderAttribBlock(role){
@@ -1204,6 +1244,9 @@ function renderNightStep(area, seq){
       </select>
       ${opts.length===0?'<p style="color:var(--gris2);font-size:.78rem;margin-top:6px">Aucun rôle disponible. Vérifiez l\'attribution dans le setup.</p>':''}
     </div>`;
+    if(isDecouverteNuit1()&&!S.joueurs.some(j=>j.roleId==='agentd')){
+      ctxHTML+=`<button onclick="toggleAgentdDefer()" style="width:100%;margin-top:4px;padding:12px;border-radius:8px;border:1px solid ${S.agentdDeferred?'var(--vert2)':'var(--gris2)'};background:${S.agentdDeferred?'rgba(46,139,69,.12)':'rgba(255,255,255,.04)'};color:${S.agentdDeferred?'var(--vert2)':'var(--gris2)'};font-family:Georgia,serif;font-size:.82rem;cursor:pointer;-webkit-appearance:none;">${S.agentdDeferred?'✓ Carte non distribuée pour l\'instant — cliquez pour annuler':'🃏 La carte n\'a pas encore été distribuée'}</button>`;
+    }
   }
 
   if(role.id==='entrem'){
@@ -1224,11 +1267,14 @@ function renderNightStep(area, seq){
     ctxHTML=renderNightSelector(role,curSel,'');
   }
 
+  const nameEditorHTML=isDecouverteNuit1()?renderNameEditorToggle():'';
+
   area.innerHTML=`<div class="pc">
     <div class="eyebrow">Étape ${S.stepNuit+1}/${n} — Phase de Nuit · Tour ${S.tour}</div>
     <div class="ptitle">La communauté dort…</div>
     <div class="pdesc">Tous les yeux sont fermés.</div>
     <div class="night-prog">${progress}</div>
+    ${nameEditorHTML}
     <div class="rspot ${cc}">
       <div class="rstep">Rôle ${S.stepNuit+1} sur ${n}</div>
       <div class="rname">${role.nom}${(() => {
@@ -1683,10 +1729,13 @@ function transitionToNight(){
 function nextStep(){
   if(S.phase==='nuit'){
     const seq=getNightSeq();
-    if(isDecouverteNuit1()&&S.stepNuit>=seq.length-1){
-      const missing=attributionMissing();
-      if(missing.length){
-        alert('Attribution incomplète — il manque : '+missing.join(', ')+'. Attribuez chaque rôle avant de terminer la Nuit 1.');
+    if(isDecouverteNuit1()){
+      const role=seq[S.stepNuit];
+      if(!stepAttributionOk(role)){
+        const cap=roleCapacity(role.id);
+        const count=S.joueurs.filter(j=>j.roleId===role.id).length;
+        const label=cap>1?role.nom:roleDisplaySingular(role);
+        alert(`Attribuez d'abord ${label} (${count}/${cap}) avant de continuer.`);
         return;
       }
     }
