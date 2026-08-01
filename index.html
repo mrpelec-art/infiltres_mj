@@ -195,6 +195,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 .nsel-btn.sel{border-color:var(--or);background:rgba(200,150,12,.15);color:var(--or2);font-weight:600;}
 .nsel-btn.sel.inf{border-color:var(--rouge2);background:rgba(196,48,48,.15);color:var(--rouge2);}
 .nsel-btn.sel.vert{border-color:var(--vert2);background:rgba(46,139,69,.15);color:var(--vert2);}
+.nsel-btn:disabled{opacity:.35;cursor:not-allowed;}
 .nsel-summary{font-size:.75rem;color:var(--creme2);min-height:1.1em;}
 .nsel-summary strong{color:var(--or);}
 
@@ -321,6 +322,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
       <label class="field-label">Nombre de joueurs</label>
       <input type="number" class="nb-input" id="nbJ" min="7" max="20" value="10" oninput="onNbChange()">
       <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+        <div class="field-label" style="margin-bottom:10px">Attribution des rôles</div>
+        <div style="display:flex;gap:8px;">
+          <button class="alt-btn active" id="nightModeAttribBtn" onclick="setNightMode('attribution')">Avant la partie</button>
+          <button class="alt-btn" id="nightModeDecouverteBtn" onclick="setNightMode('decouverte')">Pendant la Nuit 1</button>
+        </div>
+        <div style="font-size:.7rem;color:var(--gris2);margin-top:8px;line-height:1.5;" id="nightModeDesc">Vous attribuez chaque rôle à un joueur dans l'onglet Attribution, avant de démarrer la partie.</div>
+      </div>
+      <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
         <div class="field-label" style="margin-bottom:10px">Hackeuse : que lui montrer ?</div>
         <div style="display:flex;gap:8px;">
           <button class="alt-btn active" id="hackModeRoleBtn" onclick="setHackMode('role')">Rôle complet</button>
@@ -346,6 +355,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 
     <!-- Panneau 2 : attribution -->
     <div class="spanel" id="sp1">
+      <div id="assignModeNote" style="display:none;background:rgba(59,16,96,.2);border:1px solid rgba(107,63,160,.4);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:.8rem;color:var(--creme2);line-height:1.5;">Mode « Pendant la Nuit 1 » actif : l'attribution des rôles se fera en direct au fil de la première nuit. Vous pouvez tout de même saisir les noms des joueurs ci-dessous, ou démarrer directement.</div>
       <label class="field-label">Nom du joueur &amp; rôle attribué</label>
       <div class="assign-grid" id="assignGrid"></div>
       <label class="field-label">Sage (titre honorifique)</label>
@@ -464,8 +474,12 @@ const RDEFS = [
    note:'Elle n\'ouvre pas grand les yeux. Restez attentif à tout mouvement.'},
 ];
 const RDIURNES = [
-  {id:'journaliste',nom:'Journaliste',camp:'neu'},
-  {id:'martyr',    nom:'Martyr',      camp:'neu'},
+  {id:'journaliste',nom:'Journaliste',camp:'neu',ordre:20,
+   instr:'Le Journaliste ne se réveille jamais et n\'a aucun pouvoir nocturne. S\'il est le dernier joueur non-Infiltré en vie, il gagne seul la partie — même face aux Infiltrés survivants.',
+   note:'Rôle silencieux : rien à faire la nuit, ni à annoncer de jour.'},
+  {id:'martyr',    nom:'Martyr',      camp:'neu',ordre:21,
+   instr:'Le Martyr ne se réveille jamais et n\'a aucun pouvoir nocturne. S\'il est éliminé en tout premier lors d\'un vote de jour, il gagne aussitôt seul la partie.',
+   note:'Rôle silencieux : rien à faire la nuit, ni à annoncer de jour.'},
 ];
 const ALL_ROLES = [...RDEFS, ...RDIURNES];
 function getRDef(id){return ALL_ROLES.find(r=>r.id===id)||null;}
@@ -478,6 +492,7 @@ function campClass(camp){return camp==='inf'?'inf':camp==='neu'?'neu':camp==='bo
 let S = {
   nbJ:10,
   nbInfCustom:null, // nombre d'Infiltrés choisi par le MJ, sinon ratio idéal
+  nightMode:'attribution', // 'attribution' (avant la partie) | 'decouverte' (pendant la Nuit 1)
   noms:{},  // joueurId -> nom saisi
   hackMode:'role', // 'role' | 'categorie'
   hackReveal:null, // {nom, affichage, couleurCamp}
@@ -569,6 +584,14 @@ function setHackMode(mode){
   document.getElementById('hackModeDesc').textContent=mode==='role'
     ?'Affiche le rôle exact (ex. "Entremetteuse").'
     :'Affiche seulement "Infiltré", "Journaliste" ou "Croyant".';
+}
+function setNightMode(mode){
+  S.nightMode=mode;
+  document.getElementById('nightModeAttribBtn').classList.toggle('active', mode==='attribution');
+  document.getElementById('nightModeDecouverteBtn').classList.toggle('active', mode==='decouverte');
+  document.getElementById('nightModeDesc').textContent=mode==='attribution'
+    ?'Vous attribuez chaque rôle à un joueur dans l\'onglet Attribution, avant de démarrer la partie.'
+    :'Distribuez les cartes de rôle vous-même. Lors de la Nuit 1, l\'appli réveille chaque rôle un par un — même ceux qui ne se réveillent jamais habituellement — pour l\'expliquer et noter qui le porte.';
 }
 function updatePreselection(){
   const n=S.nbJ;
@@ -670,6 +693,8 @@ function refreshAllAssignSels(){
 
 function buildAssignGrid(){
   S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
+  const note=document.getElementById('assignModeNote');
+  if(note) note.style.display=S.nightMode==='decouverte'?'block':'none';
   const g=document.getElementById('assignGrid'); g.innerHTML='';
   for(let i=0;i<S.nbJ;i++){
     const row=document.createElement('div'); row.className='assign-row';
@@ -728,6 +753,7 @@ updateRatio();
 // START
 // ============================================================
 function attributionMissing(){
+  if(S.nightMode==='decouverte') return []; // l'attribution se fera pendant la Nuit 1
   const vals=Object.values(S.assignments).filter(Boolean);
   const nbInfTotal=getNbInfTarget();
   const nbInfAssigned=vals.filter(v=>v==='infiltres').length;
@@ -900,7 +926,19 @@ function isRoleActive(r){
   return true;
 }
 
+function isDecouverteNuit1(){
+  return S.tour===1 && S.nightMode==='decouverte';
+}
+
 function getNightSeq(){
+  if(isDecouverteNuit1()){
+    // Nuit 1 « Découverte » : on réveille absolument tout le monde, même les rôles
+    // qui ne se réveillent jamais normalement, pour expliquer chaque rôle et
+    // attribuer les cartes en direct.
+    return [...RDEFS,...RDIURNES]
+      .filter(r=>S.rolesActifs.has(r.id))
+      .sort((a,b)=>a.ordre-b.ordre);
+  }
   const isFirst=S.tour===1;
   return RDEFS
     .filter(r=>S.rolesActifs.has(r.id))
@@ -910,6 +948,69 @@ function getNightSeq(){
     // Exclure leader et guetteuse de la rotation automatique (ils agissent spontanément)
     .filter(r=>r.id!=='leader'&&r.id!=='guetteuse')
     .sort((a,b)=>a.ordre-b.ordre);
+}
+
+// ============================================================
+// ATTRIBUTION EN DIRECT (Nuit 1 « Découverte »)
+// ============================================================
+// Joueurs déjà porteurs d'un autre rôle que roleId (une seule carte par joueur)
+function decouverteTakenPlayers(roleId){
+  const taken=new Set();
+  S.joueurs.forEach(j=>{ if(j.roleId&&j.roleId!==roleId) taken.add(j.id); });
+  return taken;
+}
+
+function renderAttribBlock(role){
+  if(role.id==='infiltres'){
+    const target=getNbInfTarget();
+    const current=S.joueurs.filter(j=>j.roleId==='infiltres');
+    const taken=decouverteTakenPlayers('infiltres');
+    const btns=S.joueurs.map(j=>{
+      const isSel=j.roleId==='infiltres';
+      const disabled=!isSel&&(taken.has(j.id)||current.length>=target);
+      return `<button class="nsel-btn${isSel?' sel inf':''}"${disabled?' disabled':''} onclick="toggleAttribInfiltre(${j.id})">${jNom(j)}</button>`;
+    }).join('');
+    return `<div class="info-box rouge">
+      <div class="info-box-title">Qui sont les Infiltrés ? (${current.length}/${target})</div>
+      <p style="margin-bottom:8px">Cliquez sur chaque joueur qui a reçu une carte Infiltré.</p>
+      <div class="nsel-grid">${btns}</div>
+    </div>`;
+  }
+  const cur=S.joueurs.find(j=>j.roleId===role.id);
+  const taken=decouverteTakenPlayers(role.id);
+  const btns=S.joueurs.map(j=>{
+    const isSel=cur&&cur.id===j.id;
+    const disabled=!isSel&&taken.has(j.id);
+    return `<button class="nsel-btn${isSel?' sel':''}"${disabled?' disabled':''} onclick="assignDecouverte('${role.id}',${j.id})">${jNom(j)}</button>`;
+  }).join('');
+  return `<div class="info-box violet">
+    <div class="info-box-title">Qui a cette carte ?</div>
+    <p style="margin-bottom:8px">${cur?`<strong>${cur.nom}</strong> porte ce rôle.`:'Cliquez sur le joueur qui a reçu cette carte.'}</p>
+    <div class="nsel-grid">${btns}</div>
+  </div>`;
+}
+
+function assignDecouverte(roleId,playerId){
+  // Un seul porteur pour ce rôle : on retire l'ancien s'il y en a un
+  S.joueurs.forEach(j=>{ if(j.roleId===roleId){ j.roleId=null; delete S.assignments[j.id]; } });
+  const j=S.joueurs[playerId];
+  if(j.roleId) return; // déjà porteur d'un autre rôle
+  j.roleId=roleId; S.assignments[playerId]=roleId;
+  renderContent(); renderPlayers();
+}
+
+function toggleAttribInfiltre(playerId){
+  const j=S.joueurs[playerId];
+  if(j.roleId==='infiltres'){
+    j.roleId=null; delete S.assignments[playerId];
+  } else {
+    if(j.roleId) return; // déjà porteur d'un autre rôle
+    const target=getNbInfTarget();
+    const current=S.joueurs.filter(x=>x.roleId==='infiltres').length;
+    if(current>=target) return;
+    j.roleId='infiltres'; S.assignments[playerId]='infiltres';
+  }
+  renderContent(); renderPlayers();
 }
 
 // ============================================================
@@ -964,6 +1065,7 @@ function renderNightStep(area, seq){
   const progress=seq.map((_,i)=>`<div class="np${i<S.stepNuit?' done':i===S.stepNuit?' cur':''}"></div>`).join('');
   const cc=role.camp==='inf'?'inf':role.camp==='bon'?'or':'';
   const curSel=S.nightSels[S.stepNuit]||[];
+  const attribHTML=isDecouverteNuit1()?renderAttribBlock(role):'';
 
   // Infos contextuelles selon le rôle
   let ctxHTML='';
@@ -1125,6 +1227,7 @@ function renderNightStep(area, seq){
       })()}</div>
       <div class="rinstr">${role.instr}</div>
       ${role.note?`<div class="rnote">💡 ${role.note}</div>`:''}
+      ${attribHTML}
       ${ctxHTML}
     </div>
     ${S._hackExtraHTML||''}
