@@ -320,7 +320,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
     <!-- Panneau 1 : joueurs & rôles -->
     <div class="spanel active" id="sp0">
       <label class="field-label">Nombre de joueurs</label>
-      <input type="number" class="nb-input" id="nbJ" min="7" max="20" value="10" oninput="onNbChange()">
+      <input type="number" class="nb-input" id="nbJ" min="7" max="25" value="10" oninput="onNbChange()">
       <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
         <div class="field-label" style="margin-bottom:10px">Attribution des rôles</div>
         <div style="display:flex;gap:8px;">
@@ -504,6 +504,8 @@ let S = {
   assignments: {},      // joueurId -> roleId
   sageId: null,         // joueurId du Sage
   agentDoubleRole: null,// roleId choisi par agent double
+  nonDistribuees: new Set(),// roleId des cartes confirmées non distribuées à un joueur (Nuit 1 Découverte)
+  nameEditorOpen: false,// panneau de renommage des joueurs ouvert (Nuit 1 Découverte)
   coupleIds: [],        // [id1,id2]
   lanceuseCibleId: null,// cible de la lanceuse (réinitialisé chaque nuit)
   intercCibleId: null,
@@ -622,6 +624,8 @@ function updatePreselection(){
     // 18 : 4e infiltré (géré via ratio)
     {min:19, id:'propag'},
     // 20 : croyant lambda (pas de rôle à cocher)
+    // 21 : 5e infiltré (géré via ratio)
+    {min:22, id:'colocataire'},
   ];
   S.rolesActifs=new Set();
   sequence.forEach(r=>{ if(n>=r.min) S.rolesActifs.add(r.id); });
@@ -634,7 +638,7 @@ function updatePreselection(){
     el.className='rtog'+(S.rolesActifs.has(id)?' active '+campCls:'');
   });
 }
-function nbInfIdeal(n){return n<=11?2:n<=16?3:4;}
+function nbInfIdeal(n){return n<=11?2:n<=16?3:n<=20?4:5;}
 function getNbInfTarget(){
   return (S.nbInfCustom!=null&&S.nbInfCustom>0)?S.nbInfCustom:nbInfIdeal(S.nbJ);
 }
@@ -646,7 +650,7 @@ function updateRatio(){
   const nbChr=n-nbInf;
   el.textContent=`${nbChr} Croyants + ${nbInf} Infiltrés (+ Propagandiste si utilisé)`;
   const box=document.getElementById('ratioBox');
-  if(box) box.style.borderColor=n<7||n>20?'var(--rouge)':'var(--gris)';
+  if(box) box.style.borderColor=n<7||n>25?'var(--rouge)':'var(--gris)';
   const infInput=document.getElementById('nbInfInput');
   if(infInput) infInput.placeholder=String(nbInf);
 }
@@ -794,6 +798,7 @@ function startGame(){
   S.nightSels={}; S.nightElimId=null; S._noElim=false;
   S.ministSauv=false; S.ministElim=false; S.ministElimCibleId=null; S._hackExtraHTML=''; S.propagUsed=false; S.leaderUsed=false; S.martyrFirst=false; S.pasteurDesigne=false; S.victoryType=null;
   S.coupleIds=[]; S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null; S.agentDoubleRole=null;
+  S.nonDistribuees=new Set(); S.nameEditorOpen=false;
   document.getElementById('screen-setup').style.display='none';
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
@@ -973,10 +978,50 @@ function decouverteTakenPlayers(roleId){
   return taken;
 }
 
+// Un rôle est considéré réglé une fois sa capacité atteinte, ou une fois confirmé
+// comme non distribué (carte restée dans le talon — voir Agent Double).
+function stepAttributionOk(role){
+  if(!role) return true;
+  if(S.nonDistribuees.has(role.id)) return true;
+  const cap=roleCapacity(role.id);
+  const count=S.joueurs.filter(j=>j.roleId===role.id).length;
+  return count>=cap;
+}
+
+function toggleNonDistribuee(roleId){
+  if(S.nonDistribuees.has(roleId)) S.nonDistribuees.delete(roleId);
+  else S.nonDistribuees.add(roleId);
+  renderContent();
+}
+
+function toggleNameEditor(){
+  S.nameEditorOpen=!S.nameEditorOpen;
+  renderContent();
+}
+
+function renamePlayer(id,val){
+  const nom=(val||'').trim()||`Joueur ${id+1}`;
+  S.joueurs[id].nom=nom; S.noms[id]=nom;
+  // Différer le re-rendu : appelé depuis un événement "change" (blur), remplacer le DOM
+  // dans le même tick peut faire planter le navigateur sur le nœud en cours de retrait.
+  setTimeout(()=>{ renderContent(); renderPlayers(); },0);
+}
+
+function renderNameEditorToggle(){
+  const grid=S.nameEditorOpen?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;max-height:280px;overflow-y:auto;">
+    ${S.joueurs.map(j=>`<input type="text" class="assign-nom" value="${j.nom.replace(/"/g,'&quot;')}" placeholder="Joueur ${j.id+1}" onchange="renamePlayer(${j.id},this.value)">`).join('')}
+  </div>`:'';
+  return `<div style="margin-bottom:14px;">
+    <button onclick="toggleNameEditor()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gris);background:var(--noir3);color:var(--creme2);font-size:.78rem;cursor:pointer;-webkit-appearance:none;text-align:left;">✏️ ${S.nameEditorOpen?'Masquer les noms':'Modifier les noms des joueurs'}</button>
+    ${grid}
+  </div>`;
+}
+
 function renderAttribBlock(role){
   const cap=roleCapacity(role.id);
   const current=S.joueurs.filter(j=>j.roleId===role.id);
   const taken=decouverteTakenPlayers(role.id);
+  const nonDistribuee=S.nonDistribuees.has(role.id);
   const colorClass=role.id==='infiltres'?' inf':'';
   const btns=S.joueurs.map(j=>{
     const isSel=j.roleId===role.id;
@@ -987,10 +1032,14 @@ function renderAttribBlock(role){
   const hint=cap>1
     ?`Cliquez sur chaque joueur qui a reçu une carte ${roleDisplaySingular(role)}.`
     :(current.length?`<strong>${current[0].nom}</strong> porte ce rôle.`:'Cliquez sur le joueur qui a reçu cette carte.');
+  const nonDistribueeBtn=current.length<cap
+    ?`<button onclick="toggleNonDistribuee('${role.id}')" style="width:100%;margin-top:10px;padding:12px;border-radius:8px;border:1px solid ${nonDistribuee?'var(--vert2)':'var(--gris2)'};background:${nonDistribuee?'rgba(46,139,69,.12)':'rgba(255,255,255,.04)'};color:${nonDistribuee?'var(--vert2)':'var(--gris2)'};font-family:Georgia,serif;font-size:.82rem;cursor:pointer;-webkit-appearance:none;">${nonDistribuee?'✓ Carte(s) non distribuée(s) — cliquez pour annuler':'🃏 Cette carte n\'a pas été distribuée'}</button>`
+    :'';
   return `<div class="info-box ${role.id==='infiltres'?'rouge':'violet'}">
     <div class="info-box-title">${title}</div>
     <p style="margin-bottom:8px">${hint}</p>
     <div class="nsel-grid">${btns}</div>
+    ${nonDistribueeBtn}
   </div>`;
 }
 
@@ -1009,6 +1058,7 @@ function toggleAttrib(roleId,playerId){
       if(current>=cap) return;
     }
     j.roleId=roleId; S.assignments[playerId]=roleId;
+    S.nonDistribuees.delete(roleId); // manifestement distribuée après tout
   }
   renderContent(); renderPlayers();
 }
@@ -1222,11 +1272,14 @@ function renderNightStep(area, seq){
     ctxHTML=renderNightSelector(role,curSel,'');
   }
 
+  const nameEditorHTML=isDecouverteNuit1()?renderNameEditorToggle():'';
+
   area.innerHTML=`<div class="pc">
     <div class="eyebrow">Étape ${S.stepNuit+1}/${n} — Phase de Nuit · Tour ${S.tour}</div>
     <div class="ptitle">La communauté dort…</div>
     <div class="pdesc">Tous les yeux sont fermés.</div>
     <div class="night-prog">${progress}</div>
+    ${nameEditorHTML}
     <div class="rspot ${cc}">
       <div class="rstep">Rôle ${S.stepNuit+1} sur ${n}</div>
       <div class="rname">${role.nom}${(() => {
@@ -1681,10 +1734,13 @@ function transitionToNight(){
 function nextStep(){
   if(S.phase==='nuit'){
     const seq=getNightSeq();
-    if(isDecouverteNuit1()&&S.stepNuit>=seq.length-1){
-      const missing=attributionMissing();
-      if(missing.length){
-        alert('Attribution incomplète — il manque : '+missing.join(', ')+'. Attribuez chaque rôle avant de terminer la Nuit 1.');
+    if(isDecouverteNuit1()){
+      const role=seq[S.stepNuit];
+      if(!stepAttributionOk(role)){
+        const cap=roleCapacity(role.id);
+        const count=S.joueurs.filter(j=>j.roleId===role.id).length;
+        const label=cap>1?role.nom:roleDisplaySingular(role);
+        alert(`Attribuez d'abord ${label} (${count}/${cap}), ou indiquez que la carte n'a pas été distribuée, avant de continuer.`);
         return;
       }
     }
