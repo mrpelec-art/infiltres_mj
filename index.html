@@ -504,7 +504,7 @@ let S = {
   assignments: {},      // joueurId -> roleId
   sageId: null,         // joueurId du Sage
   agentDoubleRole: null,// roleId choisi par agent double
-  agentdDeferred: false,// carte Agent Double pas encore distribuée (Nuit 1 Découverte)
+  nonDistribuees: new Set(),// roleId des cartes confirmées non distribuées à un joueur (Nuit 1 Découverte)
   nameEditorOpen: false,// panneau de renommage des joueurs ouvert (Nuit 1 Découverte)
   coupleIds: [],        // [id1,id2]
   lanceuseCibleId: null,// cible de la lanceuse (réinitialisé chaque nuit)
@@ -798,7 +798,7 @@ function startGame(){
   S.nightSels={}; S.nightElimId=null; S._noElim=false;
   S.ministSauv=false; S.ministElim=false; S.ministElimCibleId=null; S._hackExtraHTML=''; S.propagUsed=false; S.leaderUsed=false; S.martyrFirst=false; S.pasteurDesigne=false; S.victoryType=null;
   S.coupleIds=[]; S.lanceuseCibleId=null; S.intercCibleId=null; S.jugeCibleId=null; S.agentDoubleRole=null;
-  S.agentdDeferred=false; S.nameEditorOpen=false;
+  S.nonDistribuees=new Set(); S.nameEditorOpen=false;
   document.getElementById('screen-setup').style.display='none';
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
@@ -978,17 +978,19 @@ function decouverteTakenPlayers(roleId){
   return taken;
 }
 
-// Un rôle est considéré attribué une fois sa capacité atteinte (ou différé pour l'Agent Double)
+// Un rôle est considéré réglé une fois sa capacité atteinte, ou une fois confirmé
+// comme non distribué (carte restée dans le talon — voir Agent Double).
 function stepAttributionOk(role){
   if(!role) return true;
-  if(role.id==='agentd'&&S.agentdDeferred) return true;
+  if(S.nonDistribuees.has(role.id)) return true;
   const cap=roleCapacity(role.id);
   const count=S.joueurs.filter(j=>j.roleId===role.id).length;
   return count>=cap;
 }
 
-function toggleAgentdDefer(){
-  S.agentdDeferred=!S.agentdDeferred;
+function toggleNonDistribuee(roleId){
+  if(S.nonDistribuees.has(roleId)) S.nonDistribuees.delete(roleId);
+  else S.nonDistribuees.add(roleId);
   renderContent();
 }
 
@@ -1019,6 +1021,7 @@ function renderAttribBlock(role){
   const cap=roleCapacity(role.id);
   const current=S.joueurs.filter(j=>j.roleId===role.id);
   const taken=decouverteTakenPlayers(role.id);
+  const nonDistribuee=S.nonDistribuees.has(role.id);
   const colorClass=role.id==='infiltres'?' inf':'';
   const btns=S.joueurs.map(j=>{
     const isSel=j.roleId===role.id;
@@ -1029,10 +1032,14 @@ function renderAttribBlock(role){
   const hint=cap>1
     ?`Cliquez sur chaque joueur qui a reçu une carte ${roleDisplaySingular(role)}.`
     :(current.length?`<strong>${current[0].nom}</strong> porte ce rôle.`:'Cliquez sur le joueur qui a reçu cette carte.');
+  const nonDistribueeBtn=current.length<cap
+    ?`<button onclick="toggleNonDistribuee('${role.id}')" style="width:100%;margin-top:10px;padding:12px;border-radius:8px;border:1px solid ${nonDistribuee?'var(--vert2)':'var(--gris2)'};background:${nonDistribuee?'rgba(46,139,69,.12)':'rgba(255,255,255,.04)'};color:${nonDistribuee?'var(--vert2)':'var(--gris2)'};font-family:Georgia,serif;font-size:.82rem;cursor:pointer;-webkit-appearance:none;">${nonDistribuee?'✓ Carte(s) non distribuée(s) — cliquez pour annuler':'🃏 Cette carte n\'a pas été distribuée'}</button>`
+    :'';
   return `<div class="info-box ${role.id==='infiltres'?'rouge':'violet'}">
     <div class="info-box-title">${title}</div>
     <p style="margin-bottom:8px">${hint}</p>
     <div class="nsel-grid">${btns}</div>
+    ${nonDistribueeBtn}
   </div>`;
 }
 
@@ -1051,6 +1058,7 @@ function toggleAttrib(roleId,playerId){
       if(current>=cap) return;
     }
     j.roleId=roleId; S.assignments[playerId]=roleId;
+    S.nonDistribuees.delete(roleId); // manifestement distribuée après tout
   }
   renderContent(); renderPlayers();
 }
@@ -1244,9 +1252,6 @@ function renderNightStep(area, seq){
       </select>
       ${opts.length===0?'<p style="color:var(--gris2);font-size:.78rem;margin-top:6px">Aucun rôle disponible. Vérifiez l\'attribution dans le setup.</p>':''}
     </div>`;
-    if(isDecouverteNuit1()&&!S.joueurs.some(j=>j.roleId==='agentd')){
-      ctxHTML+=`<button onclick="toggleAgentdDefer()" style="width:100%;margin-top:4px;padding:12px;border-radius:8px;border:1px solid ${S.agentdDeferred?'var(--vert2)':'var(--gris2)'};background:${S.agentdDeferred?'rgba(46,139,69,.12)':'rgba(255,255,255,.04)'};color:${S.agentdDeferred?'var(--vert2)':'var(--gris2)'};font-family:Georgia,serif;font-size:.82rem;cursor:pointer;-webkit-appearance:none;">${S.agentdDeferred?'✓ Carte non distribuée pour l\'instant — cliquez pour annuler':'🃏 La carte n\'a pas encore été distribuée'}</button>`;
-    }
   }
 
   if(role.id==='entrem'){
@@ -1735,7 +1740,7 @@ function nextStep(){
         const cap=roleCapacity(role.id);
         const count=S.joueurs.filter(j=>j.roleId===role.id).length;
         const label=cap>1?role.nom:roleDisplaySingular(role);
-        alert(`Attribuez d'abord ${label} (${count}/${cap}) avant de continuer.`);
+        alert(`Attribuez d'abord ${label} (${count}/${cap}), ou indiquez que la carte n'a pas été distribuée, avant de continuer.`);
         return;
       }
     }
