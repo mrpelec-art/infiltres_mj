@@ -320,7 +320,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
     <!-- Panneau 1 : joueurs & rôles -->
     <div class="spanel active" id="sp0">
       <label class="field-label">Nombre de joueurs</label>
-      <input type="number" class="nb-input" id="nbJ" min="7" max="20" value="10" oninput="onNbChange()">
+      <input type="number" class="nb-input" id="nbJ" min="7" max="25" value="10" oninput="onNbChange()">
       <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
         <div class="field-label" style="margin-bottom:10px">Attribution des rôles</div>
         <div style="display:flex;gap:8px;">
@@ -622,6 +622,8 @@ function updatePreselection(){
     // 18 : 4e infiltré (géré via ratio)
     {min:19, id:'propag'},
     // 20 : croyant lambda (pas de rôle à cocher)
+    // 21 : 5e infiltré (géré via ratio)
+    {min:22, id:'colocataire'},
   ];
   S.rolesActifs=new Set();
   sequence.forEach(r=>{ if(n>=r.min) S.rolesActifs.add(r.id); });
@@ -634,7 +636,7 @@ function updatePreselection(){
     el.className='rtog'+(S.rolesActifs.has(id)?' active '+campCls:'');
   });
 }
-function nbInfIdeal(n){return n<=11?2:n<=16?3:4;}
+function nbInfIdeal(n){return n<=11?2:n<=16?3:n<=20?4:5;}
 function getNbInfTarget(){
   return (S.nbInfCustom!=null&&S.nbInfCustom>0)?S.nbInfCustom:nbInfIdeal(S.nbJ);
 }
@@ -646,7 +648,7 @@ function updateRatio(){
   const nbChr=n-nbInf;
   el.textContent=`${nbChr} Croyants + ${nbInf} Infiltrés (+ Propagandiste si utilisé)`;
   const box=document.getElementById('ratioBox');
-  if(box) box.style.borderColor=n<7||n>20?'var(--rouge)':'var(--gris)';
+  if(box) box.style.borderColor=n<7||n>25?'var(--rouge)':'var(--gris)';
   const infInput=document.getElementById('nbInfInput');
   if(infInput) infInput.placeholder=String(nbInf);
 }
