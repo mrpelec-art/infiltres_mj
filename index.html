@@ -127,7 +127,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 
 /* Zone principale */
 .main-area{display:flex;flex-direction:column;overflow:hidden;}
-.phase-nav{display:flex;align-items:center;justify-content:space-between;padding:9px 20px;background:var(--noir3);border-bottom:1px solid var(--gris);flex-shrink:0;}
+.phase-nav{display:flex;align-items:center;justify-content:space-between;padding:calc(9px + env(safe-area-inset-top)) 20px 9px;background:var(--noir3);border-bottom:1px solid var(--gris);flex-shrink:0;}
 .phase-ind{display:flex;align-items:center;gap:9px;}
 .pdot{width:9px;height:9px;border-radius:50%;}
 .pdot.nuit{background:var(--violet3);box-shadow:0 0 7px var(--violet3);}
