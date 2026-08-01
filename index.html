@@ -457,6 +457,9 @@ const RDEFS = [
   {id:'juge',    nom:'Juge',                  camp:'chr',ordre:8, nuit1:false,recur:true, maxSel:1,altKey:null,
    instr:'Le Juge désigne un joueur contre lequel une voix sera automatiquement comptée lors du vote du jour suivant. Personne ne saura d\'où vient cette voix.',
    note:'Annoncez le vote supplémentaire discrètement lors du décompte, sans en révéler l\'origine.'},
+  {id:'colocataire',nom:'Colocataires',       camp:'chr',ordre:9, nuit1:true, recur:false,maxSel:0,altKey:null,
+   instr:'Les trois Colocataires se réveillent ensemble, se reconnaissent silencieusement, puis se rendorment. Ils savent désormais qu\'aucun des trois n\'est un Infiltré.',
+   note:'Simples Croyants sans pouvoir : ils ne partagent que cette certitude entre eux, une seule fois, la première nuit.'},
   {id:'infiltres',nom:'Infiltrés',         camp:'inf',ordre:10, nuit1:false,recur:true, maxSel:1,altKey:null,
    instr:'Les Infiltrés se réveillent, se reconnaissent et désignent silencieusement leur cible de la nuit.',
    note:'Vérifiez ensuite si l\'Avocate ou le Ministre protège la cible.'},
@@ -654,29 +657,39 @@ function onNbInfChange(){
   refreshAllAssignSels();
 }
 
-// Rôles qui peuvent être attribués à plusieurs joueurs (pas de limite)
-const ROLES_MULTI=['infiltres',''];
+// Rôles qui peuvent être attribués à plusieurs joueurs (capacité > 1)
+const ROLES_MULTI=['infiltres','colocataire',''];
+function roleCapacity(roleId){
+  if(roleId==='infiltres') return getNbInfTarget();
+  if(roleId==='colocataire') return 3;
+  return 1;
+}
+function roleDisplaySingular(r){
+  if(r.id==='infiltres') return 'Infiltré';
+  if(r.id==='colocataire') return 'Colocataire';
+  return r.nom;
+}
 
 function fillAssignSel(sel, j){
-  // Rôles déjà pris par d'autres joueurs (hors multi)
+  // Rôles à porteur unique déjà pris par d'autres joueurs
   const taken=new Set();
   Object.entries(S.assignments).forEach(([k,v])=>{
     if(parseInt(k)!==j&&v&&!ROLES_MULTI.includes(v)) taken.add(v);
   });
   const curVal=S.assignments[j]||'';
-  // Infiltrés : plafonné au nombre choisi (ou ratio idéal) pour cette partie
-  const nbInfTarget=getNbInfTarget();
-  const nbInfAssignedOthers=Object.entries(S.assignments).filter(([k,v])=>parseInt(k)!==j&&v==='infiltres').length;
-  const infiltresAvailable=curVal==='infiltres'||nbInfAssignedOthers<nbInfTarget;
   const roleOpts=RDEFS.filter(r=>S.rolesActifs.has(r.id));
   const diurneOpts=RDIURNES.filter(r=>S.rolesActifs.has(r.id));
   sel.innerHTML='';
   const base=document.createElement('option'); base.value=''; base.textContent='Croyant (de base)'; sel.appendChild(base);
   [...roleOpts,...diurneOpts].forEach(r=>{
-    if(r.id==='infiltres'){ if(!infiltresAvailable) return; } // quota d'Infiltrés atteint
-    else if(taken.has(r.id)) return; // déjà pris par quelqu'un d'autre
+    if(ROLES_MULTI.includes(r.id)){
+      // Rôle à plusieurs porteurs : plafonné à sa capacité (ratio Infiltrés, trio Colocataires…)
+      const cap=roleCapacity(r.id);
+      const assignedOthers=Object.entries(S.assignments).filter(([k,v])=>parseInt(k)!==j&&v===r.id).length;
+      if(curVal!==r.id&&assignedOthers>=cap) return; // quota atteint
+    } else if(taken.has(r.id)) return; // déjà pris par quelqu'un d'autre
     const o=document.createElement('option'); o.value=r.id;
-    o.textContent=r.id==='infiltres'?'Infiltré':r.nom;
+    o.textContent=roleDisplaySingular(r);
     sel.appendChild(o);
   });
   sel.value=curVal;
@@ -753,25 +766,25 @@ updateRatio();
 // START
 // ============================================================
 function attributionMissing(){
-  if(S.nightMode==='decouverte') return []; // l'attribution se fera pendant la Nuit 1
   const vals=Object.values(S.assignments).filter(Boolean);
-  const nbInfTotal=getNbInfTarget();
-  const nbInfAssigned=vals.filter(v=>v==='infiltres').length;
   const missing=[];
-  if(nbInfAssigned<nbInfTotal) missing.push(`Infiltrés (${nbInfAssigned}/${nbInfTotal})`);
-  [...RDEFS,...RDIURNES].filter(r=>S.rolesActifs.has(r.id)&&r.id!=='infiltres').forEach(r=>{
-    if(!vals.includes(r.id)) missing.push(r.nom);
+  [...RDEFS,...RDIURNES].filter(r=>S.rolesActifs.has(r.id)).forEach(r=>{
+    const cap=roleCapacity(r.id);
+    const count=vals.filter(v=>v===r.id).length;
+    if(count<cap) missing.push(cap>1?`${r.nom} (${count}/${cap})`:r.nom);
   });
   return missing;
 }
 
 function startGame(){
   S.nbJ=parseInt(document.getElementById('nbJ').value)||10;
-  const missing=attributionMissing();
-  if(missing.length){
-    switchTab(1);
-    alert('Attribution incomplète — il manque : '+missing.join(', '));
-    return;
+  if(S.nightMode==='attribution'){
+    const missing=attributionMissing();
+    if(missing.length){
+      switchTab(1);
+      alert('Attribution incomplète — il manque : '+missing.join(', '));
+      return;
+    }
   }
   // Récupérer sage du setup si panneau 1 actif
   const sageSel=document.getElementById('sageSetupSel');
@@ -961,54 +974,41 @@ function decouverteTakenPlayers(roleId){
 }
 
 function renderAttribBlock(role){
-  if(role.id==='infiltres'){
-    const target=getNbInfTarget();
-    const current=S.joueurs.filter(j=>j.roleId==='infiltres');
-    const taken=decouverteTakenPlayers('infiltres');
-    const btns=S.joueurs.map(j=>{
-      const isSel=j.roleId==='infiltres';
-      const disabled=!isSel&&(taken.has(j.id)||current.length>=target);
-      return `<button class="nsel-btn${isSel?' sel inf':''}"${disabled?' disabled':''} onclick="toggleAttribInfiltre(${j.id})">${jNom(j)}</button>`;
-    }).join('');
-    return `<div class="info-box rouge">
-      <div class="info-box-title">Qui sont les Infiltrés ? (${current.length}/${target})</div>
-      <p style="margin-bottom:8px">Cliquez sur chaque joueur qui a reçu une carte Infiltré.</p>
-      <div class="nsel-grid">${btns}</div>
-    </div>`;
-  }
-  const cur=S.joueurs.find(j=>j.roleId===role.id);
+  const cap=roleCapacity(role.id);
+  const current=S.joueurs.filter(j=>j.roleId===role.id);
   const taken=decouverteTakenPlayers(role.id);
+  const colorClass=role.id==='infiltres'?' inf':'';
   const btns=S.joueurs.map(j=>{
-    const isSel=cur&&cur.id===j.id;
-    const disabled=!isSel&&taken.has(j.id);
-    return `<button class="nsel-btn${isSel?' sel':''}"${disabled?' disabled':''} onclick="assignDecouverte('${role.id}',${j.id})">${jNom(j)}</button>`;
+    const isSel=j.roleId===role.id;
+    const disabled=!isSel&&(taken.has(j.id)||current.length>=cap);
+    return `<button class="nsel-btn${isSel?' sel'+colorClass:''}"${disabled?' disabled':''} onclick="toggleAttrib('${role.id}',${j.id})">${jNom(j)}</button>`;
   }).join('');
-  return `<div class="info-box violet">
-    <div class="info-box-title">Qui a cette carte ?</div>
-    <p style="margin-bottom:8px">${cur?`<strong>${cur.nom}</strong> porte ce rôle.`:'Cliquez sur le joueur qui a reçu cette carte.'}</p>
+  const title=cap>1?`Qui sont les ${role.nom} ? (${current.length}/${cap})`:'Qui a cette carte ?';
+  const hint=cap>1
+    ?`Cliquez sur chaque joueur qui a reçu une carte ${roleDisplaySingular(role)}.`
+    :(current.length?`<strong>${current[0].nom}</strong> porte ce rôle.`:'Cliquez sur le joueur qui a reçu cette carte.');
+  return `<div class="info-box ${role.id==='infiltres'?'rouge':'violet'}">
+    <div class="info-box-title">${title}</div>
+    <p style="margin-bottom:8px">${hint}</p>
     <div class="nsel-grid">${btns}</div>
   </div>`;
 }
 
-function assignDecouverte(roleId,playerId){
-  // Un seul porteur pour ce rôle : on retire l'ancien s'il y en a un
-  S.joueurs.forEach(j=>{ if(j.roleId===roleId){ j.roleId=null; delete S.assignments[j.id]; } });
+function toggleAttrib(roleId,playerId){
   const j=S.joueurs[playerId];
-  if(j.roleId) return; // déjà porteur d'un autre rôle
-  j.roleId=roleId; S.assignments[playerId]=roleId;
-  renderContent(); renderPlayers();
-}
-
-function toggleAttribInfiltre(playerId){
-  const j=S.joueurs[playerId];
-  if(j.roleId==='infiltres'){
+  if(j.roleId===roleId){
     j.roleId=null; delete S.assignments[playerId];
   } else {
     if(j.roleId) return; // déjà porteur d'un autre rôle
-    const target=getNbInfTarget();
-    const current=S.joueurs.filter(x=>x.roleId==='infiltres').length;
-    if(current>=target) return;
-    j.roleId='infiltres'; S.assignments[playerId]='infiltres';
+    const cap=roleCapacity(roleId);
+    if(cap<=1){
+      // Porteur unique : on retire l'ancien s'il y en a un
+      S.joueurs.forEach(x=>{ if(x.roleId===roleId){ x.roleId=null; delete S.assignments[x.id]; } });
+    } else {
+      const current=S.joueurs.filter(x=>x.roleId===roleId).length;
+      if(current>=cap) return;
+    }
+    j.roleId=roleId; S.assignments[playerId]=roleId;
   }
   renderContent(); renderPlayers();
 }
@@ -1209,6 +1209,15 @@ function renderNightStep(area, seq){
     // Stocker le couple dès sélection faite
   }
 
+  if(role.id==='colocataire'){
+    const colocs=S.joueurs.filter(j=>j.roleId==='colocataire');
+    ctxHTML=`<div class="info-box violet">
+      <div class="info-box-title">Colocataires</div>
+      <p>${colocs.length?colocs.map(j=>`<strong>${jNom(j)}</strong>`).join(', '):'Aucun joueur attribué pour l\'instant.'}</p>
+      ${colocs.length===3?'<p style="margin-top:6px">Ils se reconnaissent et savent qu\'aucun des trois n\'est Infiltré.</p>':''}
+    </div>`;
+  }
+
   if(!ctxHTML&&role.maxSel>0){
     ctxHTML=renderNightSelector(role,curSel,'');
   }
@@ -1221,7 +1230,7 @@ function renderNightStep(area, seq){
     <div class="rspot ${cc}">
       <div class="rstep">Rôle ${S.stepNuit+1} sur ${n}</div>
       <div class="rname">${role.nom}${(() => {
-        if(role.id==='infiltres') return '';
+        if(role.id==='infiltres'||role.id==='colocataire') return '';
         const p=S.joueurs.find(j=>j.roleId===role.id&&!j.elimine);
         return p ? '<span style="font-size:.9rem;font-weight:400;opacity:.6;margin-left:10px">— '+p.nom+'</span>' : '';
       })()}</div>
@@ -1672,6 +1681,13 @@ function transitionToNight(){
 function nextStep(){
   if(S.phase==='nuit'){
     const seq=getNightSeq();
+    if(isDecouverteNuit1()&&S.stepNuit>=seq.length-1){
+      const missing=attributionMissing();
+      if(missing.length){
+        alert('Attribution incomplète — il manque : '+missing.join(', ')+'. Attribuez chaque rôle avant de terminer la Nuit 1.');
+        return;
+      }
+    }
     S.stepNuit++;
     if(S.stepNuit>=seq.length){ S.phase='bilan'; }
     renderContent();
