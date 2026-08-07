@@ -322,6 +322,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
       <label class="field-label">Nombre de joueurs</label>
       <input type="number" class="nb-input" id="nbJ" min="7" max="25" value="10" oninput="onNbChange()">
       <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+        <div class="field-label" style="margin-bottom:10px">Inscription en ligne</div>
+        <div id="inscriptionInit">
+          <div style="font-size:.72rem;color:var(--gris2);margin-bottom:10px;line-height:1.5;">Générez un QR code que les joueurs scannent pour s'inscrire eux-mêmes avant la partie.</div>
+          <button class="btn-sec" style="margin-bottom:0;" onclick="creerInscription()" id="creerInscriptionBtn">📋 Créer un lien d'inscription</button>
+        </div>
+        <div id="inscriptionActive" class="hidden">
+          <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px;">
+            <div id="qrHolder" style="background:#fff;border-radius:8px;padding:6px;flex-shrink:0;line-height:0;"></div>
+            <div style="min-width:0;">
+              <div style="font-size:.65rem;color:var(--gris2);text-transform:uppercase;letter-spacing:.1em;">Code de la partie</div>
+              <div style="font-family:Georgia,serif;font-size:1.6rem;color:var(--or2);font-weight:700;letter-spacing:.12em;" id="codeText">—</div>
+              <div style="font-size:.72rem;color:var(--creme2);margin-top:4px;" id="regCountText">0 inscrit·e</div>
+            </div>
+          </div>
+          <button class="btn-sec" style="margin-bottom:0;" onclick="importerInscrits()" id="importBtn" disabled>Importer les inscrits</button>
+        </div>
+      </div>
+      <div style="background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
         <div class="field-label" style="margin-bottom:10px">Attribution des rôles</div>
         <div style="display:flex;gap:8px;">
           <button class="alt-btn active" id="nightModeAttribBtn" onclick="setNightMode('attribution')">Avant la partie</button>
@@ -496,6 +514,7 @@ let S = {
   nbJ:10,
   nbInfCustom:null, // nombre d'Infiltrés choisi par le MJ, sinon ratio idéal
   nightMode:'attribution', // 'attribution' (avant la partie) | 'decouverte' (pendant la Nuit 1)
+  inscriptionCode:null, // code de partie Firestore, une fois le lien d'inscription créé
   noms:{},  // joueurId -> nom saisi
   hackMode:'role', // 'role' | 'categorie'
   hackReveal:null, // {nom, affichage, couleurCamp}
@@ -1888,6 +1907,88 @@ function renderVictoire(area){
     <button class="btn-restart" style="margin-top:28px;border-color:${cfg.accent};color:${cfg.accent};cursor:pointer;" onclick="nouvellePartie()">Nouvelle partie</button>
   </div>`;
 }
+</script>
+<script src="qrcode.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, doc, setDoc, serverTimestamp, collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+let unsubReg = null;
+let regDocs = []; // groupes inscrits, dans l'ordre d'inscription : [{names:[...]}]
+
+// Sans caractères ambigus (0/O, 1/I) pour rester lisible à l'oral.
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for(let i=0;i<4;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+
+function inscriptionUrl(code){
+  return `${location.origin}${location.pathname.replace(/[^/]+$/,'')}inscription.html?code=${code}`;
+}
+
+function renderQr(code){
+  const qr = qrcode(0, 'M'); // typeNumber 0 = taille détectée automatiquement
+  qr.addData(inscriptionUrl(code));
+  qr.make();
+  document.getElementById('qrHolder').innerHTML = qr.createSvgTag({cellSize:4, margin:2});
+}
+
+function watchRegistrations(code){
+  if(unsubReg) unsubReg();
+  const q = query(collection(db,'games',code,'registrations'), orderBy('createdAt','asc'));
+  unsubReg = onSnapshot(q, snap => {
+    regDocs = snap.docs.map(d=>d.data());
+    const totalNames = regDocs.reduce((n,r)=>n+(r.names?.length||0),0);
+    document.getElementById('regCountText').textContent =
+      `${totalNames} inscrit${totalNames>1?'s':''} (${regDocs.length} groupe${regDocs.length>1?'s':''})`;
+    document.getElementById('importBtn').disabled = totalNames===0;
+  }, () => {
+    document.getElementById('regCountText').textContent = 'Erreur de synchronisation.';
+  });
+}
+
+window.creerInscription = async function(){
+  if(S.inscriptionCode) return; // déjà créé pour cette session
+  const btn = document.getElementById('creerInscriptionBtn');
+  btn.disabled = true; btn.textContent = 'Création…';
+  try{
+    const code = genCode();
+    await setDoc(doc(db,'games',code), { createdAt: serverTimestamp() });
+    S.inscriptionCode = code;
+    document.getElementById('inscriptionInit').classList.add('hidden');
+    document.getElementById('inscriptionActive').classList.remove('hidden');
+    document.getElementById('codeText').textContent = code;
+    renderQr(code);
+    watchRegistrations(code);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "📋 Créer un lien d'inscription";
+    alert("Impossible de créer le lien d'inscription. Vérifiez la connexion et la configuration Firebase.");
+  }
+};
+
+window.importerInscrits = function(){
+  const names = regDocs.flatMap(r=>r.names||[]);
+  if(!names.length) return;
+  const max = parseInt(document.getElementById('nbJ').max)||25;
+  if(names.length > max){
+    alert(`Il y a ${names.length} inscrits, mais la partie est limitée à ${max} joueurs. Seuls les ${max} premiers seront importés.`);
+  }
+  const finalNames = names.slice(0,max);
+  S.noms = {};
+  finalNames.forEach((n,i)=>{ S.noms[i]=n; });
+  S.nbJ = finalNames.length;
+  document.getElementById('nbJ').value = S.nbJ;
+  updatePreselection();
+  updateRatio();
+  buildRoleGrid();
+  alert(`${finalNames.length} joueur${finalNames.length>1?'s':''} importé${finalNames.length>1?'s':''} : ${finalNames.join(', ')}`);
+};
 </script>
 </body>
 </html>

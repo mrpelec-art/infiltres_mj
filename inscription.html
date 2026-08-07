@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0D0B12">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Les Infiltrés — Inscription</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --noir:#0D0B12;--noir2:#15111F;--noir3:#1E1830;
+  --violet:#3B1060;--violet2:#6B3FA0;--violet3:#9B6FD0;
+  --or:#C8960C;--or2:#E8B820;
+  --creme:#F0EBE0;--creme2:#C8C0B0;
+  --rouge:#8B1A1A;--rouge2:#C43030;
+  --vert:#1A5C2A;--vert2:#2E8B45;
+  --gris:#3A3550;--gris2:#5A5570;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;background:var(--noir);color:var(--creme);min-height:100vh;overflow-x:hidden;}
+#screen{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:calc(32px + env(safe-area-inset-top)) 20px 40px;background:radial-gradient(ellipse at 50% 25%,#2A1050 0%,var(--noir) 70%);}
+.logo-title{font-family:Georgia,serif;font-size:clamp(1.8rem,7vw,2.6rem);font-weight:700;letter-spacing:.1em;color:var(--creme);text-align:center;margin-bottom:6px;}
+.logo-sub{font-family:Georgia,serif;font-size:.8rem;letter-spacing:.3em;color:var(--or);text-align:center;text-transform:uppercase;margin-bottom:32px;}
+.card{width:100%;max-width:420px;background:var(--noir2);border:1px solid var(--gris);border-radius:14px;padding:24px 20px;}
+.field-label{font-size:.72rem;letter-spacing:.1em;color:var(--creme2);text-transform:uppercase;margin-bottom:8px;display:block;}
+.name-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+.name-input{flex:1;background:var(--noir3);border:1px solid var(--gris);border-radius:8px;color:var(--creme);font-size:1rem;padding:12px 14px;outline:none;}
+.name-input:focus{border-color:var(--violet2);}
+.rm-btn{background:transparent;border:1px solid var(--gris);border-radius:8px;color:var(--gris2);width:40px;height:44px;font-size:1.1rem;cursor:pointer;-webkit-appearance:none;flex-shrink:0;}
+.add-btn{width:100%;padding:12px;border-radius:8px;border:1px dashed var(--gris2);background:transparent;color:var(--creme2);font-size:.85rem;cursor:pointer;-webkit-appearance:none;margin-bottom:18px;}
+.add-btn:active{background:rgba(255,255,255,.04);}
+.group-note{font-size:.72rem;color:var(--gris2);margin:-6px 0 16px;line-height:1.5;}
+.submit-btn{width:100%;padding:16px;border-radius:10px;border:none;background:var(--violet2);color:var(--creme);font-family:Georgia,serif;font-size:1rem;font-weight:600;cursor:pointer;-webkit-appearance:none;}
+.submit-btn:active{background:var(--violet);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+.msg{text-align:center;font-size:.85rem;color:var(--rouge2);margin-top:14px;line-height:1.5;}
+.success{text-align:center;padding:20px 0;}
+.success-icon{font-size:3rem;margin-bottom:14px;}
+.success-title{font-family:Georgia,serif;font-size:1.3rem;color:var(--or2);margin-bottom:10px;}
+.success-names{font-size:.95rem;color:var(--creme2);margin-bottom:22px;line-height:1.6;}
+.again-btn{padding:12px 20px;border-radius:8px;border:1px solid var(--gris2);background:transparent;color:var(--creme2);font-size:.85rem;cursor:pointer;-webkit-appearance:none;}
+.spinner{width:28px;height:28px;border:3px solid var(--gris);border-top-color:var(--violet3);border-radius:50%;animation:spin .8s linear infinite;margin:20px auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div id="screen">
+  <div class="logo-title">LES INFILTRÉS</div>
+  <div class="logo-sub">Inscription à la partie</div>
+  <div class="card">
+
+    <div id="loadingBox">
+      <div class="spinner"></div>
+      <p style="text-align:center;color:var(--gris2);font-size:.85rem;">Vérification du lien…</p>
+    </div>
+
+    <div id="invalidBox" class="hidden">
+      <p class="msg" style="color:var(--creme2);">Ce lien d'inscription est introuvable ou invalide. Demande un nouveau QR code au maître du jeu.</p>
+    </div>
+
+    <div id="formBox" class="hidden">
+      <label class="field-label">Ton nom</label>
+      <div id="nameRows"></div>
+      <button type="button" class="add-btn" id="addBtn">+ Ajouter quelqu'un de mon groupe</button>
+      <div class="group-note">Les personnes inscrites ensemble seront placées côte à côte pendant la partie.</div>
+      <button type="button" class="submit-btn" id="submitBtn">S'inscrire</button>
+      <div id="formMsg" class="msg hidden"></div>
+    </div>
+
+    <div id="successBox" class="success hidden">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Inscription enregistrée !</div>
+      <div class="success-names" id="successNames"></div>
+      <button type="button" class="again-btn" id="againBtn">Inscrire un autre groupe</button>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(location.search);
+const code = (params.get('code')||'').trim().toUpperCase();
+
+const loadingBox = document.getElementById('loadingBox');
+const invalidBox = document.getElementById('invalidBox');
+const formBox = document.getElementById('formBox');
+const successBox = document.getElementById('successBox');
+const nameRows = document.getElementById('nameRows');
+const addBtn = document.getElementById('addBtn');
+const submitBtn = document.getElementById('submitBtn');
+const formMsg = document.getElementById('formMsg');
+const successNames = document.getElementById('successNames');
+const againBtn = document.getElementById('againBtn');
+
+const MAX_NAMES = 6;
+
+function addNameRow(focus){
+  const n = nameRows.children.length;
+  if(n>=MAX_NAMES) return;
+  const row = document.createElement('div');
+  row.className = 'name-row';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'name-input';
+  inp.placeholder = n===0 ? 'Ton nom' : `Personne ${n+1}`;
+  inp.maxLength = 40;
+  row.appendChild(inp);
+  if(n>0){
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'rm-btn';
+    rm.textContent = '✕';
+    rm.onclick = () => { row.remove(); updatePlaceholders(); };
+    row.appendChild(rm);
+  }
+  nameRows.appendChild(row);
+  if(focus) inp.focus();
+  updateAddBtn();
+}
+function updatePlaceholders(){
+  Array.from(nameRows.children).forEach((row,i)=>{
+    const inp = row.querySelector('input');
+    inp.placeholder = i===0 ? 'Ton nom' : `Personne ${i+1}`;
+  });
+  updateAddBtn();
+}
+function updateAddBtn(){
+  addBtn.style.display = nameRows.children.length>=MAX_NAMES ? 'none' : 'block';
+}
+addBtn.onclick = () => addNameRow(true);
+
+async function init(){
+  if(!code){
+    loadingBox.classList.add('hidden');
+    invalidBox.classList.remove('hidden');
+    return;
+  }
+  try{
+    const snap = await getDoc(doc(db,'games',code));
+    if(!snap.exists()){
+      loadingBox.classList.add('hidden');
+      invalidBox.classList.remove('hidden');
+      return;
+    }
+    loadingBox.classList.add('hidden');
+    formBox.classList.remove('hidden');
+    addNameRow(false);
+  }catch(e){
+    loadingBox.classList.add('hidden');
+    invalidBox.classList.remove('hidden');
+    invalidBox.querySelector('.msg').textContent = 'Impossible de vérifier ce lien pour le moment. Vérifie ta connexion et réessaie.';
+  }
+}
+init();
+
+submitBtn.onclick = async () => {
+  const names = Array.from(nameRows.querySelectorAll('input'))
+    .map(i=>i.value.trim())
+    .filter(Boolean);
+  formMsg.classList.add('hidden');
+  if(!names.length){
+    formMsg.textContent = 'Entre au moins un nom.';
+    formMsg.classList.remove('hidden');
+    return;
+  }
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Inscription…';
+  try{
+    await addDoc(collection(db,'games',code,'registrations'), {
+      names,
+      createdAt: serverTimestamp()
+    });
+    formBox.classList.add('hidden');
+    successBox.classList.remove('hidden');
+    successNames.textContent = names.join(', ');
+  }catch(e){
+    formMsg.textContent = "L'inscription a échoué. Vérifie ta connexion et réessaie.";
+    formMsg.classList.remove('hidden');
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "S'inscrire";
+  }
+};
+
+againBtn.onclick = () => {
+  nameRows.innerHTML = '';
+  addNameRow(true);
+  successBox.classList.add('hidden');
+  formBox.classList.remove('hidden');
+};
+</script>
+</body>
+</html>
