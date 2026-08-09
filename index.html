@@ -468,6 +468,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
   </div>
 </div>
 
+<!-- Modal choix du joueur qui part (accès mobile — la colonne des joueurs est masquée sur petit écran) -->
+<div class="modal-bg hidden" id="duoPickModal">
+  <div class="modal">
+    <h3>↗ Qui quitte cette communauté ?</h3>
+    <p style="font-size:.8rem;color:var(--creme2);margin-bottom:14px;line-height:1.5;">Choisissez le joueur qui rejoint une autre communauté.</p>
+    <div id="duoPickList" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="modal-btn cancel" style="flex:1" onclick="closeDuoPickModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal envoi transfert -->
 <div class="modal-bg hidden" id="duoSendModal">
   <div class="modal">
@@ -1030,6 +1042,27 @@ function updateDuoModalView(){
   } else {
     createBox.classList.remove('hidden'); joinBox.classList.remove('hidden'); statusBox.classList.add('hidden');
   }
+}
+
+// Point d'entrée mobile : la colonne des joueurs (et son bouton ↗ par joueur)
+// est masquée sur petit écran, donc on propose ici de choisir qui part avant
+// d'enchaîner sur le même flux que le bouton ↗ (openDuoSendModal).
+function openDuoPickModal(){
+  const others=duoOtherVillages();
+  if(!others.length){ alert("Aucune autre communauté n'est encore reliée."); return; }
+  const list=document.getElementById('duoPickList');
+  const alive=getAlive();
+  if(!alive.length){ list.innerHTML='<p style="font-size:.8rem;color:var(--gris2);">Aucun joueur en vie.</p>'; }
+  else{
+    list.innerHTML=alive.map(j=>{
+      const rd=j.roleId?getRDef(j.roleId):null;
+      return `<button class="btn-sec" style="margin-bottom:0;text-align:left;" onclick="closeDuoPickModal();openDuoSendModal(${j.id})">${j.nom} <span style="opacity:.6;">— ${rd?rd.nom:'Croyant'}</span></button>`;
+    }).join('');
+  }
+  document.getElementById('duoPickModal').classList.remove('hidden');
+}
+function closeDuoPickModal(){
+  document.getElementById('duoPickModal').classList.add('hidden');
 }
 
 function openDuoSendModal(id){
@@ -1912,7 +1945,9 @@ function renderJour(area){ try {
   }
   // Partie liée : les départs se font avant le vote, les arrivées après
   if(S.duoLinked&&duoOtherVillages().length>0){
-    rappels.push(`<div class="jr-item">🔗 C'est le moment de demander si quelqu'un veut rejoindre une autre communauté — un départ doit se faire <strong>avant</strong> le vote.</div>`);
+    rappels.push(`<div class="jr-item">🔗 C'est le moment de demander si quelqu'un veut rejoindre une autre communauté — un départ doit se faire <strong>avant</strong> le vote.
+      <button onclick="openDuoPickModal()" style="display:block;margin-top:8px;padding:8px 14px;border-radius:6px;border:1px solid var(--violet3);background:rgba(107,63,160,.15);color:var(--violet3);font-size:.75rem;cursor:pointer;-webkit-appearance:none;">↗ Faire partir un joueur</button>
+    </div>`);
   }
 
   const rappelHTML=rappels.length?`<div class="jour-rappels"><div class="jr-title">Rappels de début de journée</div>${rappels.join('')}</div>`:'';
