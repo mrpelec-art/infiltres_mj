@@ -1,6 +1,28 @@
 // Configuration Firebase du projet "Les Infiltrés".
 // Ces valeurs identifient le projet mais ne sont pas secrètes : la sécurité
 // réelle est assurée par les règles Firestore, pas par ce fichier.
+//
+// Les règles doivent autoriser la lecture/écriture des collections "games"
+// (QR d'inscription) et "duo" (parties liées à plusieurs communautés,
+// jusqu'à 6 : A à F). Si la collection "duo" n'est pas encore couverte par
+// tes règles actuelles, ajoute ce bloc dedans (à côté du bloc "games" déjà
+// en place) :
+//
+//     match /duo/{code} {
+//       allow read: if true;
+//       allow create: if !exists(/databases/$(database)/documents/duo/$(code));
+//       // "villages" est une map {A:true, B:true, ...} — chaque MJ qui
+//       // rejoint y ajoute sa propre lettre (villages.C, etc.), d'où le
+//       // hasOnly(['villages']) plutôt qu'une liste de champs fixes.
+//       allow update: if request.resource.data.diff(resource.data).affectedKeys()
+//                        .hasOnly(['villages']);
+//       match /transfers/{transferId} {
+//         allow read: if true;
+//         allow create: if request.resource.data.keys().hasAll(['fromVillage','toVillage','playerName','consumed']);
+//         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consumed']);
+//       }
+//     }
+//
 export const firebaseConfig = {
   apiKey: "AIzaSyDJt1sqTuBUaDVIDwp8mQPLq8zMtfc7QaI",
   authDomain: "les-infiltres-b4ea2.firebaseapp.com",
