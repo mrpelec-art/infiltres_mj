@@ -311,6 +311,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
   <div class="logo-title">LES INFILTRÉS</div>
   <div class="logo-sub">Outil du Maître du Jeu</div>
   <div class="setup-card">
+    <div class="duoBarSlot" style="margin-bottom:16px;background:var(--noir3);border:1px solid var(--gris);border-radius:8px;padding:10px 12px;"></div>
     <div class="setup-tabs">
       <button class="stab active" onclick="switchTab(0)">① Joueurs & Rôles</button>
       <button class="stab" onclick="switchTab(1)">② Attribution</button>
@@ -403,6 +404,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
         <h3>Joueurs</h3>
         <div class="sage-indicator" onclick="openSageModal()" id="sageIndicator">⭐ Sage : —</div>
       </div>
+      <div class="duoBarSlot" style="padding:8px 10px;border-bottom:1px solid var(--gris);"></div>
       <div class="players-list" id="playersList"></div>
       <div class="score-bar">
         <div class="sc-item chr"><div class="sc-num" id="scAlive">—</div><div class="sc-lbl">En jeu</div></div>
@@ -439,6 +441,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
     <div class="modal-actions">
       <button class="modal-btn cancel" id="sageModalCancel" onclick="closeSageModal()">Annuler</button>
       <button class="modal-btn ok" onclick="confirmSage()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Partie liée (plusieurs communautés) -->
+<div class="modal-bg hidden" id="duoModal">
+  <div class="modal" style="max-width:400px;">
+    <h3>🔗 Lier des communautés</h3>
+    <p style="font-size:.8rem;color:var(--creme2);margin-bottom:14px;line-height:1.5;">Reliez votre partie à celle d'un ou plusieurs autres MJ (jusqu'à 6 communautés) pour pouvoir transférer des joueurs de l'une à l'autre en cours de jeu.</p>
+    <div id="duoCreateBox">
+      <button class="btn-sec" style="margin-bottom:10px;" onclick="duoCreate()" id="duoCreateBtn">Créer la liaison (je suis la Communauté A)</button>
+    </div>
+    <div style="text-align:center;font-size:.7rem;color:var(--gris2);margin:10px 0;text-transform:uppercase;letter-spacing:.1em;">— ou —</div>
+    <div id="duoJoinBox">
+      <label class="field-label">Code reçu d'un autre MJ</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="assign-nom" id="duoJoinInput" maxlength="4" placeholder="Ex : A7K2" style="text-transform:uppercase;font-family:Georgia,serif;font-size:1rem;letter-spacing:.1em;">
+        <button class="modal-btn ok" style="flex:0 0 auto;padding:8px 16px;" onclick="duoJoin()">Rejoindre</button>
+      </div>
+    </div>
+    <div id="duoStatusBox" class="hidden" style="margin-top:14px;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="modal-btn cancel" style="flex:1" onclick="closeDuoModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal envoi transfert -->
+<div class="modal-bg hidden" id="duoSendModal">
+  <div class="modal">
+    <h3>↗ Transférer vers une autre communauté</h3>
+    <p style="font-size:.8rem;color:var(--creme2);margin-bottom:14px;line-height:1.5;" id="duoSendDesc"></p>
+    <div id="duoSendDestBox" class="hidden" style="margin-bottom:14px;">
+      <label class="field-label">Communauté de destination</label>
+      <select class="modal-sel" id="duoSendDestSel"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" style="flex:1" onclick="closeDuoSendModal()">Annuler</button>
+      <button class="modal-btn ok" style="flex:1" onclick="confirmDuoSend()">Confirmer le transfert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal réception transfert -->
+<div class="modal-bg hidden" id="duoImportModal">
+  <div class="modal">
+    <h3>🔄 Arrivée de l'autre communauté</h3>
+    <p style="font-size:.8rem;color:var(--creme2);margin-bottom:14px;line-height:1.5;" id="duoImportDesc"></p>
+    <div id="duoImportConflict" class="hidden" style="margin-bottom:14px;">
+      <label class="field-label">Ce rôle est déjà attribué ici — choisissez :</label>
+      <select class="modal-sel" id="duoImportRoleSel"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ok" style="flex:1" onclick="confirmDuoImport()">Accueillir ce joueur</button>
     </div>
   </div>
 </div>
@@ -507,6 +563,10 @@ function getRDef(id){return ALL_ROLES.find(r=>r.id===id)||null;}
 function jNom(j){return j.nom+(S.coupleIds.includes(j.id)&&!j.elimine?' 💕':'');}
 function campClass(camp){return camp==='inf'?'inf':camp==='neu'?'neu':camp==='bon'?'bon':'chr';}
 
+// Étiquettes disponibles pour une partie liée à plusieurs communautés (jusqu'à 6).
+// var (pas const) : doit rester accessible depuis le script Firebase (type="module", portée séparée).
+var DUO_VILLAGE_LABELS=['A','B','C','D','E','F'];
+
 // ============================================================
 // STATE
 // ============================================================
@@ -552,6 +612,15 @@ let S = {
   avocatePrevCibleId: null,  // dernière cible de l'Avocate (exclue le tour suivant)
   lanceusePrevCibleId: null, // dernière cible de la Lanceuse (exclue le tour suivant)
   jugePrevCibleId: null,     // dernière cible du Juge (exclue le tour suivant)
+  gameStarted: false,        // true une fois "Commencer la partie" cliqué
+  // --- Partie liée à plusieurs communautés ---
+  duoCode: null,             // code Firestore reliant les communautés
+  duoVillage: null,          // 'A'..'F' — identité de CETTE communauté dans la liaison
+  duoLinked: false,          // liaison active (code obtenu, écoute en cours)
+  duoVillages: {},           // {A:true,B:true,...} labels actuellement reliés à ce code
+  duoSendTargetId: null,     // joueur en attente de confirmation d'envoi
+  duoPendingImport: null,    // {id,fromVillage,playerName,roleId} transfert entrant en attente d'accueil
+  duoQueuedImports: [],      // transferts reçus avant même le démarrage de CETTE partie (traités une fois lancée)
   // Alternance : altMap[key] = 'pair'|'impair'  (quelle nuit le rôle est actif)
   altMap: {interc:'impair', propag:'pair'},
 };
@@ -821,9 +890,12 @@ function startGame(){
   S.nonDistribuees=new Set(); S.nameEditorOpen=false;
   const agentdJ=S.joueurs.find(j=>j.roleId==='agentd');
   S.agentdPorteurId=agentdJ?agentdJ.id:null;
+  S.gameStarted=true;
   document.getElementById('screen-setup').style.display='none';
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
+  // Traiter les transferts reçus pendant que cette partie n'était pas encore lancée
+  processDuoQueue();
 }
 
 // ============================================================
@@ -837,10 +909,11 @@ function renderPlayers(){
   list.innerHTML='';
   const alive=getAlive().length;
   document.getElementById('scAlive').textContent=alive;
-  document.getElementById('scElim').textContent=S.joueurs.filter(j=>j.elimine).length;
+  document.getElementById('scElim').textContent=S.joueurs.filter(j=>j.elimine&&!j.transferredOut).length;
   // Sage indicator
   const sageJ=S.sageId!==null?S.joueurs[S.sageId]:null;
   document.getElementById('sageIndicator').textContent='⭐ Sage : '+(sageJ&&!sageJ.elimine?sageJ.nom:'—');
+  renderDuoBar();
 
   S.joueurs.forEach(j=>{
     const div=document.createElement('div');
@@ -851,15 +924,23 @@ function renderPlayers(){
     left.appendChild(nm);
     // Rôle badge
     const rid=j.roleId;
-    if(rid){const rd=getRDef(rid);if(rd){const rb=document.createElement('div');rb.className='prole '+campClass(rd.camp);rb.textContent=rd.nom;left.appendChild(rb);}}
+    if(j.transferredOut){
+      const rb=document.createElement('div'); rb.className='prole'; rb.style.color='var(--violet3)';
+      rb.textContent=`↗ Parti·e à la Communauté ${j.duoOtherVillage||'?'}`; left.appendChild(rb);
+    } else if(rid){const rd=getRDef(rid);if(rd){const rb=document.createElement('div');rb.className='prole '+campClass(rd.camp);rb.textContent=rd.nom;left.appendChild(rb);}}
     else{const rb=document.createElement('div');rb.className='prole chr';rb.textContent='Croyant';left.appendChild(rb);}
     const right=document.createElement('div'); right.className='pright';
     const vb=document.createElement('div'); vb.className='vbadge'+(j.votes>0?' vis':''); vb.textContent=j.votes;
     if(!j.elimine){
+      if(S.duoLinked){
+        const tb=document.createElement('button'); tb.className='elim-btn'; tb.innerHTML='↗'; tb.title='Transférer vers une autre communauté'; tb.style.borderColor='var(--violet3)'; tb.style.color='var(--violet3)';
+        tb.addEventListener('click',e=>{e.stopPropagation();openDuoSendModal(j.id);});
+        right.appendChild(tb);
+      }
       const eb=document.createElement('button'); eb.className='elim-btn'; eb.innerHTML='✕'; eb.title='Éliminer';
       eb.addEventListener('click',e=>{e.stopPropagation();elimJ(j.id);});
       right.appendChild(vb); right.appendChild(eb);
-    } else {
+    } else if(!j.transferredOut){
       const rb2=document.createElement('button'); rb2.className='revive-btn'; rb2.innerHTML='↩'; rb2.title='Réintégrer';
       rb2.addEventListener('click',e=>{e.stopPropagation();reviveJ(j.id);});
       right.appendChild(rb2);
@@ -888,6 +969,184 @@ function elimJ(id){
   }
 }
 function reviveJ(id){S.joueurs[id].elimine=false; renderPlayers();}
+
+// ============================================================
+// PARTIE LIÉE — PLUSIEURS COMMUNAUTÉS
+// ============================================================
+// Communautés actuellement reliées, hors la nôtre.
+function duoOtherVillages(){
+  return Object.keys(S.duoVillages||{}).filter(l=>l!==S.duoVillage).sort();
+}
+
+function renderDuoBar(){
+  const bars=document.querySelectorAll('.duoBarSlot');
+  if(!bars.length) return;
+  let html;
+  if(!S.duoLinked){
+    html=`<button onclick="openDuoModal()" style="width:100%;padding:7px;border-radius:6px;border:1px dashed var(--gris2);background:transparent;color:var(--gris2);font-size:.7rem;cursor:pointer;-webkit-appearance:none;">🔗 Lier à une autre communauté</button>`;
+  } else {
+    const others=duoOtherVillages();
+    const color=others.length?'var(--vert2)':'var(--or)';
+    const txt=others.length
+      ? `${others.length} communauté${others.length>1?'s':''} liée${others.length>1?'s':''} (${others.join(', ')})`
+      : 'en attente d\'une autre communauté…';
+    const queueWhen=!S.gameStarted?'dès le lancement de la partie':'après le vote du jour';
+    const queueNote=S.duoQueuedImports.length
+      ?`<div style="margin-top:6px;font-size:.64rem;color:var(--or2);">⏳ ${S.duoQueuedImports.length} joueur${S.duoQueuedImports.length>1?'s':''} en attente — accueil ${queueWhen}.</div>`:'';
+    html=`<div onclick="openDuoModal()" style="cursor:pointer;font-size:.66rem;color:${color};display:flex;align-items:center;gap:6px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+      <span>🔗 Communauté ${S.duoVillage} — ${txt}</span>
+    </div>${queueNote}`;
+  }
+  bars.forEach(bar=>{ bar.innerHTML=html; });
+}
+
+function openDuoModal(){
+  document.getElementById('duoModal').classList.remove('hidden');
+  updateDuoModalView();
+}
+function closeDuoModal(){
+  document.getElementById('duoModal').classList.add('hidden');
+}
+function updateDuoModalView(){
+  const createBox=document.getElementById('duoCreateBox');
+  const joinBox=document.getElementById('duoJoinBox');
+  const statusBox=document.getElementById('duoStatusBox');
+  if(!createBox) return;
+  if(S.duoLinked){
+    createBox.classList.add('hidden'); joinBox.classList.add('hidden');
+    statusBox.classList.remove('hidden');
+    const labels=Object.keys(S.duoVillages||{}).sort();
+    const full=labels.length>=DUO_VILLAGE_LABELS.length;
+    const chips=labels.map(l=>{
+      const isMe=l===S.duoVillage;
+      return `<span style="display:inline-block;margin:2px 6px 2px 0;padding:3px 10px;border-radius:12px;font-size:.72rem;background:${isMe?'rgba(200,150,12,.2)':'rgba(46,139,69,.15)'};color:${isMe?'var(--or2)':'var(--vert2)'};">Communauté ${l}${isMe?' (vous)':''}</span>`;
+    }).join('');
+    statusBox.innerHTML = `<div class="info-box violet"><div class="info-box-title">Code de la liaison</div><p style="font-family:Georgia,serif;font-size:1.5rem;color:var(--or2);letter-spacing:.15em;">${S.duoCode}</p></div>
+      <p style="font-size:.75rem;color:var(--creme2);margin-bottom:8px;">Communautés reliées (${labels.length}/${DUO_VILLAGE_LABELS.length}) :</p>
+      <div>${chips}</div>
+      ${full?'<p style="font-size:.7rem;color:var(--gris2);margin-top:8px;">Nombre maximum de communautés atteint.</p>':`<p style="font-size:.7rem;color:var(--gris2);margin-top:8px;">Partagez le code ci-dessus avec d'autres MJ pour qu'ils rejoignent.</p>`}`;
+  } else {
+    createBox.classList.remove('hidden'); joinBox.classList.remove('hidden'); statusBox.classList.add('hidden');
+  }
+}
+
+function openDuoSendModal(id){
+  const j=S.joueurs[id];
+  if(!j||j.elimine) return;
+  const others=duoOtherVillages();
+  if(!others.length){ alert("Aucune autre communauté n'est encore reliée."); return; }
+  S.duoSendTargetId=id;
+  const rd=j.roleId?getRDef(j.roleId):null;
+  const destBox=document.getElementById('duoSendDestBox');
+  if(others.length>1){
+    destBox.classList.remove('hidden');
+    const sel=document.getElementById('duoSendDestSel');
+    sel.innerHTML=others.map(l=>`<option value="${l}">Communauté ${l}</option>`).join('');
+    document.getElementById('duoSendDesc').textContent=`${j.nom} (${rd?rd.nom:'Croyant'}) va quitter cette communauté. Choisissez sa destination :`;
+  } else {
+    destBox.classList.add('hidden');
+    document.getElementById('duoSendDesc').textContent=`${j.nom} (${rd?rd.nom:'Croyant'}) va quitter cette communauté pour rejoindre la Communauté ${others[0]}. Il/elle ne pourra plus jouer ici.`;
+  }
+  document.getElementById('duoSendModal').classList.remove('hidden');
+}
+function closeDuoSendModal(){
+  S.duoSendTargetId=null;
+  document.getElementById('duoSendModal').classList.add('hidden');
+}
+function confirmDuoSend(){
+  const id=S.duoSendTargetId;
+  const j=id!=null?S.joueurs[id]:null;
+  const destBox=document.getElementById('duoSendDestBox');
+  const others=duoOtherVillages();
+  const otherVillage=(!destBox.classList.contains('hidden'))
+    ? document.getElementById('duoSendDestSel').value
+    : others[0];
+  document.getElementById('duoSendModal').classList.add('hidden');
+  S.duoSendTargetId=null;
+  if(!j||j.elimine||!otherVillage) return;
+  const roleId=j.roleId, nom=j.nom;
+  j.elimine=true; j.transferredOut=true; j.duoOtherVillage=otherVillage; j.votes=0;
+  const wasSage=S.sageId===id;
+  if(wasSage) S.sageId=null;
+  renderPlayers(); checkVictory();
+  if(typeof window.duoSendTransfer==='function') window.duoSendTransfer(nom, roleId, S.duoVillage, otherVillage);
+  if(wasSage&&S.phase!=='victoire') setTimeout(()=>openSageModal(true),300);
+}
+
+// Un rôle à porteur limité est-il déjà occupé (en vie) dans CETTE communauté ?
+function duoRoleConflict(roleId){
+  if(!roleId) return false;
+  const rd=getRDef(roleId);
+  if(!rd) return false;
+  const cap=roleCapacity(roleId);
+  const current=S.joueurs.filter(j=>j.roleId===roleId&&!j.elimine).length;
+  return current>=cap;
+}
+function duoBuildRoleOptions(){
+  const opts=[{v:'',lbl:'Croyant (rôle de base)'}];
+  [...RDEFS,...RDIURNES].forEach(r=>{ if(!duoRoleConflict(r.id)) opts.push({v:r.id,lbl:r.nom}); });
+  return opts;
+}
+
+// Appelé depuis le script Firebase (module) quand un transfert nous est destiné.
+function duoOnIncoming(transfer){
+  // Un départ se fait avant le vote, une arrivée après : si notre partie n'a pas
+  // encore démarré, si on est en pleine Phase de Jour (vote en cours), ou si un
+  // autre accueil est déjà en cours de traitement, on met de côté — traité un par
+  // un, juste après "Commencer la partie →" ou juste après le vote (transitionToNight).
+  if(!S.gameStarted||S.phase==='jour'||S.duoPendingImport){
+    S.duoQueuedImports.push(transfer);
+    renderDuoBar();
+    return;
+  }
+  duoShowImportModal(transfer);
+}
+function duoShowImportModal(transfer){
+  S.duoPendingImport=transfer;
+  const rd=transfer.roleId?getRDef(transfer.roleId):null;
+  document.getElementById('duoImportDesc').textContent=`${transfer.playerName} arrive de la Communauté ${transfer.fromVillage} avec le rôle : ${rd?rd.nom:'Croyant'}.`;
+  const conflict=transfer.roleId&&duoRoleConflict(transfer.roleId);
+  const conflictBox=document.getElementById('duoImportConflict');
+  if(conflict){
+    conflictBox.classList.remove('hidden');
+    const sel=document.getElementById('duoImportRoleSel');
+    sel.innerHTML='';
+    duoBuildRoleOptions().forEach(o=>{ const op=document.createElement('option'); op.value=o.v; op.textContent=o.lbl; sel.appendChild(op); });
+  } else {
+    conflictBox.classList.add('hidden');
+  }
+  document.getElementById('duoImportModal').classList.remove('hidden');
+}
+// À appeler une fois la partie prête à accueillir (démarrée, hors Phase de Jour) :
+// fait remonter le prochain transfert en attente, s'il y en a un.
+function processDuoQueue(){
+  if(S.duoPendingImport) return;
+  if(!S.duoQueuedImports.length) return;
+  if(!S.gameStarted||S.phase==='jour') return;
+  const next=S.duoQueuedImports.shift();
+  renderDuoBar();
+  duoShowImportModal(next);
+}
+function confirmDuoImport(){
+  const transfer=S.duoPendingImport;
+  if(!transfer) return;
+  document.getElementById('duoImportModal').classList.add('hidden');
+  let roleId=transfer.roleId||null;
+  const conflictBox=document.getElementById('duoImportConflict');
+  if(!conflictBox.classList.contains('hidden')){
+    roleId=document.getElementById('duoImportRoleSel').value||null;
+  }
+  const newId=S.joueurs.length;
+  S.joueurs.push({id:newId, nom:transfer.playerName||`Joueur ${newId+1}`, elimine:false, votes:0, roleId});
+  if(roleId) S.rolesActifs.add(roleId);
+  S.nbJ=S.joueurs.length;
+  if(typeof window.duoMarkConsumed==='function') window.duoMarkConsumed(transfer.id);
+  S.duoPendingImport=null;
+  renderPlayers(); renderContent();
+  alert(`✅ ${transfer.playerName} rejoint la Communauté ${S.duoVillage}${roleId?` en tant que ${getRDef(roleId)?.nom}`:' en tant que Croyant'}.`);
+  processDuoQueue();
+}
 
 // ============================================================
 // SAGE MODAL
@@ -1645,6 +1904,10 @@ function renderJour(area){ try {
     const noms=S.propagCibles.map(id=>S.joueurs[id]?.nom||'?').join(', ');
     rappels.push(`<div class="jr-item warn">⚠️ Propagandiste : seuls <strong>${noms}</strong> participent au vote. L'un d'eux sera éliminé.</div>`);
   }
+  // Partie liée : les départs se font avant le vote, les arrivées après
+  if(S.duoLinked&&duoOtherVillages().length>0){
+    rappels.push(`<div class="jr-item">🔗 C'est le moment de demander si quelqu'un veut rejoindre une autre communauté — un départ doit se faire <strong>avant</strong> le vote.</div>`);
+  }
 
   const rappelHTML=rappels.length?`<div class="jour-rappels"><div class="jr-title">Rappels de début de journée</div>${rappels.join('')}</div>`:'';
 
@@ -1765,6 +2028,9 @@ function transitionToNight(){
     S.tour++; S.phase='nuit'; S.stepNuit=0;
     S.nightSels={}; S.nightElimId=null; S._noElim=false;
     renderContent(); renderPlayers();
+    // Le vote du jour est résolu : c'est le moment d'accueillir un éventuel
+    // transfert entrant mis de côté pendant la Phase de Jour.
+    processDuoQueue();
     setTimeout(()=>ov.classList.remove('active'),400);
   },800);
 }
@@ -1911,7 +2177,7 @@ function renderVictoire(area){
 <script src="qrcode.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, doc, setDoc, serverTimestamp, collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, serverTimestamp, collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const fbApp = initializeApp(firebaseConfig);
@@ -1988,6 +2254,97 @@ window.importerInscrits = function(){
   updateRatio();
   buildRoleGrid();
   alert(`${finalNames.length} joueur${finalNames.length>1?'s':''} importé${finalNames.length>1?'s':''} : ${finalNames.join(', ')}`);
+};
+
+// ============================================================
+// PARTIE LIÉE — PLUSIEURS COMMUNAUTÉS
+// ============================================================
+let unsubDuoDoc = null;
+let unsubDuoTransfers = null;
+const seenTransferIds = new Set();
+
+function watchDuoDoc(code){
+  if(unsubDuoDoc) unsubDuoDoc();
+  unsubDuoDoc = onSnapshot(doc(db,'duo',code), snap=>{
+    if(!snap.exists()) return;
+    const data = snap.data();
+    S.duoVillages = data.villages || {};
+    if(typeof updateDuoModalView==='function') updateDuoModalView();
+    renderDuoBar();
+  }, () => {});
+}
+
+function watchDuoTransfers(code, myVillage){
+  if(unsubDuoTransfers) unsubDuoTransfers();
+  const q = query(collection(db,'duo',code,'transfers'), orderBy('createdAt','asc'));
+  unsubDuoTransfers = onSnapshot(q, snap => {
+    snap.docChanges().forEach(change => {
+      if(change.type!=='added') return;
+      const id = change.doc.id;
+      if(seenTransferIds.has(id)) return;
+      seenTransferIds.add(id);
+      const data = change.doc.data();
+      if(data.toVillage===myVillage && !data.consumed){
+        window.duoOnIncoming({ id, ...data });
+      }
+    });
+  }, () => {});
+}
+
+window.duoCreate = async function(){
+  if(S.duoLinked) return;
+  const btn = document.getElementById('duoCreateBtn');
+  btn.disabled = true; btn.textContent = 'Création…';
+  try{
+    const code = genCode();
+    await setDoc(doc(db,'duo',code), { createdAt: serverTimestamp(), villages: { A:true } });
+    S.duoCode = code; S.duoVillage = 'A'; S.duoLinked = true; S.duoVillages = { A:true };
+    watchDuoDoc(code);
+    watchDuoTransfers(code,'A');
+    updateDuoModalView(); renderDuoBar(); renderPlayers();
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Créer la liaison (je suis la Communauté A)';
+    alert('Impossible de créer la liaison. Vérifiez la connexion et la configuration Firebase.');
+  }
+};
+
+window.duoJoin = async function(){
+  if(S.duoLinked) return;
+  const input = document.getElementById('duoJoinInput');
+  const code = (input.value||'').trim().toUpperCase();
+  if(!code) return;
+  try{
+    const snap = await getDoc(doc(db,'duo',code));
+    if(!snap.exists()){ alert("Ce code n'existe pas."); return; }
+    const data = snap.data();
+    const taken = Object.keys(data.villages||{});
+    const label = DUO_VILLAGE_LABELS.find(l=>!taken.includes(l));
+    if(!label){ alert(`Ce code a déjà atteint le maximum de ${DUO_VILLAGE_LABELS.length} communautés.`); return; }
+    await updateDoc(doc(db,'duo',code), { [`villages.${label}`]: true });
+    S.duoCode = code; S.duoVillage = label; S.duoLinked = true;
+    S.duoVillages = { ...data.villages, [label]:true };
+    watchDuoDoc(code);
+    watchDuoTransfers(code,label);
+    updateDuoModalView(); renderDuoBar(); renderPlayers();
+  }catch(e){
+    alert('Impossible de rejoindre cette liaison. Vérifiez le code et votre connexion.');
+  }
+};
+
+window.duoSendTransfer = async function(playerName, roleId, fromVillage, toVillage){
+  if(!S.duoCode) return;
+  try{
+    await addDoc(collection(db,'duo',S.duoCode,'transfers'), {
+      fromVillage, toVillage, playerName, roleId: roleId||null, consumed:false, createdAt: serverTimestamp()
+    });
+  }catch(e){
+    alert("Le transfert n'a pas pu être envoyé à l'autre communauté. Vérifiez la connexion — le joueur reste marqué parti localement.");
+  }
+};
+
+window.duoMarkConsumed = async function(transferId){
+  if(!S.duoCode||!transferId) return;
+  try{ await updateDoc(doc(db,'duo',S.duoCode,'transfers',transferId), { consumed:true }); }catch(e){}
 };
 </script>
 </body>
