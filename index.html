@@ -895,10 +895,7 @@ function startGame(){
   document.getElementById('screen-game').style.display='block';
   renderPlayers(); renderContent();
   // Traiter les transferts reçus pendant que cette partie n'était pas encore lancée
-  if(S.duoQueuedImports.length){
-    const queue=S.duoQueuedImports; S.duoQueuedImports=[];
-    queue.forEach(t=>duoOnIncoming(t));
-  }
+  processDuoQueue();
 }
 
 // ============================================================
@@ -993,8 +990,9 @@ function renderDuoBar(){
     const txt=others.length
       ? `${others.length} communauté${others.length>1?'s':''} liée${others.length>1?'s':''} (${others.join(', ')})`
       : 'en attente d\'une autre communauté…';
-    const queueNote=(!S.gameStarted&&S.duoQueuedImports.length)
-      ?`<div style="margin-top:6px;font-size:.64rem;color:var(--or2);">⏳ ${S.duoQueuedImports.length} joueur${S.duoQueuedImports.length>1?'s':''} en attente — accueil dès le lancement de la partie.</div>`:'';
+    const queueWhen=!S.gameStarted?'dès le lancement de la partie':'après le vote du jour';
+    const queueNote=S.duoQueuedImports.length
+      ?`<div style="margin-top:6px;font-size:.64rem;color:var(--or2);">⏳ ${S.duoQueuedImports.length} joueur${S.duoQueuedImports.length>1?'s':''} en attente — accueil ${queueWhen}.</div>`:'';
     html=`<div onclick="openDuoModal()" style="cursor:pointer;font-size:.66rem;color:${color};display:flex;align-items:center;gap:6px;">
       <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;"></span>
       <span>🔗 Communauté ${S.duoVillage} — ${txt}</span>
@@ -1093,13 +1091,18 @@ function duoBuildRoleOptions(){
 
 // Appelé depuis le script Firebase (module) quand un transfert nous est destiné.
 function duoOnIncoming(transfer){
-  if(!S.gameStarted){
-    // Notre partie n'a pas encore démarré (pas de joueurs à accueillir dedans) :
-    // on met de côté, ce sera traité juste après "Commencer la partie →".
+  // Un départ se fait avant le vote, une arrivée après : si notre partie n'a pas
+  // encore démarré, si on est en pleine Phase de Jour (vote en cours), ou si un
+  // autre accueil est déjà en cours de traitement, on met de côté — traité un par
+  // un, juste après "Commencer la partie →" ou juste après le vote (transitionToNight).
+  if(!S.gameStarted||S.phase==='jour'||S.duoPendingImport){
     S.duoQueuedImports.push(transfer);
     renderDuoBar();
     return;
   }
+  duoShowImportModal(transfer);
+}
+function duoShowImportModal(transfer){
   S.duoPendingImport=transfer;
   const rd=transfer.roleId?getRDef(transfer.roleId):null;
   document.getElementById('duoImportDesc').textContent=`${transfer.playerName} arrive de la Communauté ${transfer.fromVillage} avec le rôle : ${rd?rd.nom:'Croyant'}.`;
@@ -1114,6 +1117,16 @@ function duoOnIncoming(transfer){
     conflictBox.classList.add('hidden');
   }
   document.getElementById('duoImportModal').classList.remove('hidden');
+}
+// À appeler une fois la partie prête à accueillir (démarrée, hors Phase de Jour) :
+// fait remonter le prochain transfert en attente, s'il y en a un.
+function processDuoQueue(){
+  if(S.duoPendingImport) return;
+  if(!S.duoQueuedImports.length) return;
+  if(!S.gameStarted||S.phase==='jour') return;
+  const next=S.duoQueuedImports.shift();
+  renderDuoBar();
+  duoShowImportModal(next);
 }
 function confirmDuoImport(){
   const transfer=S.duoPendingImport;
@@ -1132,6 +1145,7 @@ function confirmDuoImport(){
   S.duoPendingImport=null;
   renderPlayers(); renderContent();
   alert(`✅ ${transfer.playerName} rejoint la Communauté ${S.duoVillage}${roleId?` en tant que ${getRDef(roleId)?.nom}`:' en tant que Croyant'}.`);
+  processDuoQueue();
 }
 
 // ============================================================
@@ -1890,6 +1904,10 @@ function renderJour(area){ try {
     const noms=S.propagCibles.map(id=>S.joueurs[id]?.nom||'?').join(', ');
     rappels.push(`<div class="jr-item warn">⚠️ Propagandiste : seuls <strong>${noms}</strong> participent au vote. L'un d'eux sera éliminé.</div>`);
   }
+  // Partie liée : les départs se font avant le vote, les arrivées après
+  if(S.duoLinked&&duoOtherVillages().length>0){
+    rappels.push(`<div class="jr-item">🔗 C'est le moment de demander si quelqu'un veut rejoindre une autre communauté — un départ doit se faire <strong>avant</strong> le vote.</div>`);
+  }
 
   const rappelHTML=rappels.length?`<div class="jour-rappels"><div class="jr-title">Rappels de début de journée</div>${rappels.join('')}</div>`:'';
 
@@ -2010,6 +2028,9 @@ function transitionToNight(){
     S.tour++; S.phase='nuit'; S.stepNuit=0;
     S.nightSels={}; S.nightElimId=null; S._noElim=false;
     renderContent(); renderPlayers();
+    // Le vote du jour est résolu : c'est le moment d'accueillir un éventuel
+    // transfert entrant mis de côté pendant la Phase de Jour.
+    processDuoQueue();
     setTimeout(()=>ov.classList.remove('active'),400);
   },800);
 }
