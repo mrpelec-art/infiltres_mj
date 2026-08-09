@@ -1653,7 +1653,12 @@ function toggleNSel(stepIdx,jid,maxSel,colorClass){
   const seq=getNightSeq();
   const role=seq[stepIdx];
   document.querySelectorAll('.nsel-btn').forEach(btn=>{
-    const bid=parseInt(btn.getAttribute('onclick').match(/toggleNSel\(\d+,(\d+)/)[1]);
+    // .nsel-btn est aussi utilisé par les boutons d'attribution (Nuit 1 Découverte,
+    // onclick="toggleAttrib(...)") — on ignore tout bouton qui n'est pas un sélecteur
+    // de cible, sinon le regex ne matche pas et on plante avant d'avoir tout mis à jour.
+    const m=btn.getAttribute('onclick').match(/toggleNSel\(\d+,(\d+)/);
+    if(!m) return;
+    const bid=parseInt(m[1]);
     const isSel=S.nightSels[stepIdx].includes(bid);
     btn.className='nsel-btn'+(isSel?' sel '+(colorClass||''):'');
   });
