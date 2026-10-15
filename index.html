@@ -340,6 +340,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
               <div style="font-size:.72rem;color:var(--creme2);margin-top:4px;" id="regCountText">0 inscrit·e</div>
             </div>
           </div>
+          <div id="regList" style="margin-bottom:12px;"></div>
           <button class="btn-sec" style="margin-bottom:0;" onclick="importerInscrits()" id="importBtn" disabled>Importer les inscrits</button>
         </div>
       </div>
@@ -2221,7 +2222,7 @@ function renderVictoire(area){
 <script src="qrcode.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, serverTimestamp, collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const fbApp = initializeApp(firebaseConfig);
@@ -2249,19 +2250,44 @@ function renderQr(code){
   document.getElementById('qrHolder').innerHTML = qr.createSvgTag({cellSize:4, margin:2});
 }
 
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderRegList(){
+  const el = document.getElementById('regList');
+  if(!regDocs.length){ el.innerHTML = ''; return; }
+  el.innerHTML = regDocs.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gris);font-size:.78rem;">
+      <div style="flex:1;min-width:0;color:var(--creme2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml((r.names||[]).join(', '))}</div>
+      <button onclick="supprimerInscription('${r.id}')" title="Supprimer cette inscription" style="background:transparent;border:1px solid var(--gris);border-radius:6px;color:var(--gris2);width:26px;height:26px;flex-shrink:0;cursor:pointer;font-size:.8rem;">✕</button>
+    </div>`).join('');
+}
+
 function watchRegistrations(code){
   if(unsubReg) unsubReg();
   const q = query(collection(db,'games',code,'registrations'), orderBy('createdAt','asc'));
   unsubReg = onSnapshot(q, snap => {
-    regDocs = snap.docs.map(d=>d.data());
+    regDocs = snap.docs.map(d=>({ id: d.id, ...d.data() }));
     const totalNames = regDocs.reduce((n,r)=>n+(r.names?.length||0),0);
     document.getElementById('regCountText').textContent =
       `${totalNames} inscrit${totalNames>1?'s':''} (${regDocs.length} groupe${regDocs.length>1?'s':''})`;
     document.getElementById('importBtn').disabled = totalNames===0;
+    renderRegList();
   }, () => {
     document.getElementById('regCountText').textContent = 'Erreur de synchronisation.';
   });
 }
+
+window.supprimerInscription = async function(id){
+  if(!S.inscriptionCode || !id) return;
+  if(!confirm('Supprimer cette inscription ?')) return;
+  try{
+    await deleteDoc(doc(db,'games',S.inscriptionCode,'registrations',id));
+  }catch(e){
+    alert("Impossible de supprimer cette inscription. Vérifiez votre connexion.");
+  }
+};
 
 window.creerInscription = async function(){
   if(S.inscriptionCode) return; // déjà créé pour cette session
