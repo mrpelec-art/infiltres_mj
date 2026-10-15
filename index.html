@@ -327,6 +327,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
         <div id="inscriptionInit">
           <div style="font-size:.72rem;color:var(--gris2);margin-bottom:10px;line-height:1.5;">Générez un QR code que les joueurs scannent pour s'inscrire eux-mêmes avant la partie.</div>
           <button class="btn-sec" style="margin-bottom:0;" onclick="creerInscription()" id="creerInscriptionBtn">📋 Créer un lien d'inscription</button>
+          <div style="margin-top:10px;font-size:.72rem;">
+            <a href="#" onclick="recupererInscription();return false;" style="color:var(--or2);text-decoration:underline;">J'ai déjà créé un lien d'inscription (sur un autre appareil ou une session précédente)</a>
+          </div>
         </div>
         <div id="inscriptionActive" class="hidden">
           <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px;">
@@ -2276,6 +2279,24 @@ window.creerInscription = async function(){
   }catch(e){
     btn.disabled = false; btn.textContent = "📋 Créer un lien d'inscription";
     alert("Impossible de créer le lien d'inscription. Vérifiez la connexion et la configuration Firebase.");
+  }
+};
+
+window.recupererInscription = async function(){
+  const saisie = prompt("Code de la partie (celui affiché sous le QR code que vous avez créé) :");
+  if(!saisie) return;
+  const code = saisie.trim().toUpperCase();
+  try{
+    const snap = await getDoc(doc(db,'games',code));
+    if(!snap.exists()){ alert("Ce code est introuvable. Vérifiez qu'il est correct."); return; }
+    S.inscriptionCode = code;
+    document.getElementById('inscriptionInit').classList.add('hidden');
+    document.getElementById('inscriptionActive').classList.remove('hidden');
+    document.getElementById('codeText').textContent = code;
+    renderQr(code);
+    watchRegistrations(code);
+  }catch(e){
+    alert("Impossible de récupérer ce lien d'inscription. Vérifiez la connexion internet.");
   }
 };
 
