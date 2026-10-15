@@ -8,6 +8,19 @@
 // tes règles actuelles, ajoute ce bloc dedans (à côté du bloc "games" déjà
 // en place) :
 //
+// Pour pouvoir supprimer une inscription test ou erronée depuis l'app (bouton
+// ✕ dans la liste des inscrits), la sous-collection "registrations" (sous
+// "games/{code}") doit aussi autoriser la suppression :
+//
+//     match /games/{code} {
+//       ...
+//       match /registrations/{regId} {
+//         allow read: if true;
+//         allow create: if true;
+//         allow delete: if true;
+//       }
+//     }
+//
 //     match /duo/{code} {
 //       allow read: if true;
 //       allow create: if !exists(/databases/$(database)/documents/duo/$(code));
