@@ -466,6 +466,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
       </div>
     </div>
     <div id="duoStatusBox" class="hidden" style="margin-top:14px;"></div>
+    <div id="duoMessagesBox" class="hidden" style="margin-top:16px;">
+      <label class="field-label">Message aux communautés liées</label>
+      <div id="duoMsgLog" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="assign-nom" id="duoMsgInput" maxlength="200" placeholder="Ex : Jean a rejoint la communauté" style="flex:1;">
+        <button class="modal-btn ok" style="flex:0 0 auto;padding:8px 16px;" onclick="duoSendMessageFromInput()">Envoyer</button>
+      </div>
+    </div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="modal-btn cancel" style="flex:1" onclick="closeDuoModal()">Fermer</button>
     </div>
@@ -637,6 +645,7 @@ let S = {
   duoSendTargetId: null,     // joueur en attente de confirmation d'envoi
   duoPendingImport: null,    // {id,fromVillage,playerName,roleId} transfert entrant en attente d'accueil
   duoQueuedImports: [],      // transferts reçus avant même le démarrage de CETTE partie (traités une fois lancée)
+  duoMessages: [],           // messages texte libres échangés entre communautés liées : [{fromVillage,text,createdAt}]
   // Alternance : altMap[key] = 'pair'|'impair'  (quelle nuit le rôle est actif)
   altMap: {interc:'impair', propag:'pair'},
 };
@@ -1043,9 +1052,46 @@ function updateDuoModalView(){
       <p style="font-size:.75rem;color:var(--creme2);margin-bottom:8px;">Communautés reliées (${labels.length}/${DUO_VILLAGE_LABELS.length}) :</p>
       <div>${chips}</div>
       ${full?'<p style="font-size:.7rem;color:var(--gris2);margin-top:8px;">Nombre maximum de communautés atteint.</p>':`<p style="font-size:.7rem;color:var(--gris2);margin-top:8px;">Partagez le code ci-dessus avec d'autres MJ pour qu'ils rejoignent.</p>`}`;
+    document.getElementById('duoMessagesBox').classList.remove('hidden');
+    renderDuoMsgLog();
   } else {
     createBox.classList.remove('hidden'); joinBox.classList.remove('hidden'); statusBox.classList.add('hidden');
+    document.getElementById('duoMessagesBox').classList.add('hidden');
   }
+}
+
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderDuoMsgLog(){
+  const log=document.getElementById('duoMsgLog');
+  if(!log) return;
+  if(!S.duoMessages.length){
+    log.innerHTML='<p style="font-size:.72rem;color:var(--gris2);">Aucun message pour l\'instant.</p>';
+    return;
+  }
+  log.innerHTML=S.duoMessages.map(m=>{
+    const mine=m.fromVillage===S.duoVillage;
+    return `<div style="font-size:.75rem;color:var(--creme2);margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--gris);">
+      <span style="color:${mine?'var(--or2)':'var(--vert2)'};font-weight:600;">Communauté ${m.fromVillage}${mine?' (vous)':''} :</span>
+      ${escHtml(m.text)}
+    </div>`;
+  }).join('');
+  log.scrollTop=log.scrollHeight;
+}
+
+function duoSendMessageFromInput(){
+  const input=document.getElementById('duoMsgInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  input.value='';
+  duoSendMessage(text);
+}
+
+function duoSendMessage(text){
+  if(!S.duoLinked||!text) return;
+  if(typeof window.duoSendMessageToFirestore==='function') window.duoSendMessageToFirestore(text);
 }
 
 // Point d'entrée mobile : la colonne des joueurs (et son bouton ↗ par joueur)
@@ -2215,8 +2261,15 @@ function renderVictoire(area){
       ${alive.length?`Survivants : <strong style="color:${cfg.accent}">${alive.map(j=>j.nom).join(', ')}</strong>`:'Plus aucun survivant.'}<br>
       <em style="font-size:.78rem;color:#888;">Partie terminée au tour ${S.tour}.</em>
     </div>
-    <button class="btn-restart" style="margin-top:28px;border-color:${cfg.accent};color:${cfg.accent};cursor:pointer;" onclick="nouvellePartie()">Nouvelle partie</button>
+    ${S.duoLinked&&duoOtherVillages().length>0?`<button class="btn-restart" id="duoAnnounceBtn" style="margin-top:16px;border-color:${cfg.accent};color:${cfg.accent};cursor:pointer;" onclick="duoAnnounceVictory('${cfg.title.replace(/'/g,"\\'")}')">📣 Annoncer le résultat aux communautés liées</button>`:''}
+    <button class="btn-restart" style="margin-top:12px;border-color:${cfg.accent};color:${cfg.accent};cursor:pointer;" onclick="nouvellePartie()">Nouvelle partie</button>
   </div>`;
+}
+
+function duoAnnounceVictory(title){
+  duoSendMessage(`Partie terminée dans notre communauté : ${title}`);
+  const btn=document.getElementById('duoAnnounceBtn');
+  if(btn){ btn.disabled=true; btn.textContent='✓ Résultat envoyé'; }
 }
 </script>
 <script src="qrcode.js"></script>
@@ -2349,7 +2402,9 @@ window.importerInscrits = function(){
 // ============================================================
 let unsubDuoDoc = null;
 let unsubDuoTransfers = null;
+let unsubDuoMessages = null;
 const seenTransferIds = new Set();
+const seenMessageIds = new Set();
 
 function watchDuoDoc(code){
   if(unsubDuoDoc) unsubDuoDoc();
@@ -2379,6 +2434,36 @@ function watchDuoTransfers(code, myVillage){
   }, () => {});
 }
 
+function watchDuoMessages(code, myVillage){
+  if(unsubDuoMessages) unsubDuoMessages();
+  const q = query(collection(db,'duo',code,'messages'), orderBy('createdAt','asc'));
+  unsubDuoMessages = onSnapshot(q, snap => {
+    S.duoMessages = snap.docs.map(d=>d.data());
+    if(typeof renderDuoMsgLog==='function') renderDuoMsgLog();
+    snap.docChanges().forEach(change => {
+      if(change.type!=='added') return;
+      const id = change.doc.id;
+      if(seenMessageIds.has(id)) return;
+      seenMessageIds.add(id);
+      const data = change.doc.data();
+      if(data.fromVillage!==myVillage){
+        alert(`💬 Communauté ${data.fromVillage} : ${data.text}`);
+      }
+    });
+  }, () => {});
+}
+
+window.duoSendMessageToFirestore = async function(text){
+  if(!S.duoCode||!S.duoVillage) return;
+  try{
+    await addDoc(collection(db,'duo',S.duoCode,'messages'), {
+      fromVillage: S.duoVillage, text, createdAt: serverTimestamp()
+    });
+  }catch(e){
+    alert("Le message n'a pas pu être envoyé. Vérifiez votre connexion.");
+  }
+};
+
 window.duoCreate = async function(){
   if(S.duoLinked) return;
   const btn = document.getElementById('duoCreateBtn');
@@ -2389,6 +2474,7 @@ window.duoCreate = async function(){
     S.duoCode = code; S.duoVillage = 'A'; S.duoLinked = true; S.duoVillages = { A:true };
     watchDuoDoc(code);
     watchDuoTransfers(code,'A');
+    watchDuoMessages(code,'A');
     updateDuoModalView(); renderDuoBar(); renderPlayers();
   }catch(e){
     btn.disabled = false; btn.textContent = 'Créer la liaison (je suis la Communauté A)';
@@ -2413,6 +2499,7 @@ window.duoJoin = async function(){
     S.duoVillages = { ...data.villages, [label]:true };
     watchDuoDoc(code);
     watchDuoTransfers(code,label);
+    watchDuoMessages(code,label);
     updateDuoModalView(); renderDuoBar(); renderPlayers();
   }catch(e){
     alert('Impossible de rejoindre cette liaison. Vérifiez le code et votre connexion.');

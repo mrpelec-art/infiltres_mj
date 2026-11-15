@@ -34,6 +34,16 @@
 //         allow create: if request.resource.data.keys().hasAll(['fromVillage','toVillage','playerName','consumed']);
 //         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consumed']);
 //       }
+//       // Messages libres entre MJ de communautés liées (arrivée d'un joueur,
+//       // résultat de la partie, etc.) — jamais modifiés ni supprimés une fois postés.
+//       match /messages/{messageId} {
+//         allow read: if true;
+//         allow create: if request.resource.data.keys().hasAll(['fromVillage','text','createdAt'])
+//                        && request.resource.data.text is string
+//                        && request.resource.data.text.size() > 0
+//                        && request.resource.data.text.size() <= 200;
+//         allow update, delete: if false;
+//       }
 //     }
 //
 export const firebaseConfig = {
